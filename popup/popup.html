@@ -45,6 +45,7 @@
 
     <main>
       <section id="aiPanel" class="tab-panel" role="tabpanel" aria-labelledby="aiTab">
+        <div id="aiFeatures" class="ai-features">
         <div class="panel-heading ai-heading"><div><h2>AI-ассистент</h2><p>Выделите текст на странице и выберите действие</p></div></div>
         <div class="ai-section-divider"><span>Общие проверки документа</span></div>
         <button class="ai-feature-card review-card" type="button" data-ai-action="review">
@@ -73,6 +74,15 @@
           </button>
         </div>
         <div class="ai-tip"><span aria-hidden="true">⌘</span><p>Можно также вызвать действия из контекстного меню выделенного текста.</p></div>
+        </div>
+        <div id="aiLock" class="ai-lock hidden">
+          <div class="ai-lock-card" role="status">
+            <span class="ai-lock-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><rect x="5" y="10" width="14" height="10" rx="2" /><path d="M8 10V7a4 4 0 0 1 8 0v3" /></svg></span>
+            <b>AI-функции недоступны</b>
+            <p>Чтобы пользоваться AI-функциями, укажите API-ключ в настройках расширения.</p>
+            <button id="aiLockOpenSettings" class="primary" type="button">Перейти в настройки</button>
+          </div>
+        </div>
       </section>
 
       <section id="exportPanel" class="tab-panel hidden" role="tabpanel" aria-labelledby="exportTab" hidden>

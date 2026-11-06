@@ -382,6 +382,16 @@ kbd { padding: 1px 4px; border: 1px solid #dfe2e9; border-radius: 4px; backgroun
 .ai-section-divider { display: flex; align-items: center; gap: 10px; margin: 8px 0 2px; color: var(--muted); font-size: 9px; font-weight: 700; letter-spacing: .4px; text-transform: uppercase; }
 .ai-section-divider::before, .ai-section-divider::after { height: 1px; flex: 1; background: #dfe3eb; content: ""; }
 .ai-section-divider span { text-align: center; }
+#aiPanel { position: relative; }
+.ai-features { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; transition: filter .18s ease; }
+.ai-features.is-locked { filter: blur(4px); pointer-events: none; user-select: none; }
+.ai-lock { position: absolute; z-index: 10; inset: 0; display: flex; align-items: center; justify-content: center; padding: 14px; }
+.ai-lock-card { display: flex; max-width: 250px; flex-direction: column; align-items: center; gap: 8px; padding: 16px 14px; border: 1px solid var(--line); border-radius: 14px; background: rgba(255, 255, 255, .94); box-shadow: 0 14px 34px rgba(16, 24, 40, .14); text-align: center; }
+.ai-lock-icon { display: grid; width: 34px; height: 34px; place-items: center; border-radius: 10px; background: #efefff; color: var(--accent); }
+.ai-lock-icon svg { width: 18px; height: 18px; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.ai-lock-card b { color: var(--ink-soft); font-size: 12px; }
+.ai-lock-card p { margin: 0; color: var(--muted); font-size: 10.5px; line-height: 1.45; }
+.ai-lock-card .primary { width: 100%; }
 .onboarding { position: fixed; z-index: 100; isolation: isolate; inset: 0; display: flex; flex-direction: column; overflow: hidden; padding: 22px; background: linear-gradient(145deg, #f6f5ff 0%, #f9fbff 48%, #effaf7 100%); animation: panel-in .2s ease both; }
 .onboarding::before, .onboarding::after { position: absolute; z-index: -1; border-radius: 50%; filter: blur(4px); content: ""; pointer-events: none; }
 .onboarding::before { top: -110px; right: -120px; width: 300px; height: 300px; background: radial-gradient(circle, rgba(129, 120, 255, .23), rgba(129, 120, 255, 0) 70%); animation: onboarding-glow 9s ease-in-out infinite alternate; }

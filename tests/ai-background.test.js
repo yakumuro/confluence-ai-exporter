@@ -53,6 +53,27 @@ test('export persistence is relayed to the sender tab key, not arbitrary storage
   assert.equal(h.local['job:7'].state, 'running');
   assert.equal(h.local['job:99'], undefined);
 });
+test('AI dialog opens in locked state when API key is not configured', async () => {
+  const h = harness();
+  await h.click({ menuItemId: 'md-ai-spelling', frameId: 2 });
+  const delivered = h.calls.find(call => call[0] === 'tab-message');
+  assert.equal(delivered[2].locked, true);
+});
+test('AI dialog opens unlocked once an API key is stored', async () => {
+  const h = harness();
+  h.local[ai.KEY] = { baseUrl: 'https://example.test/v1', apiKey: 'secret', model: 'model' };
+  await h.click({ menuItemId: 'md-ai-spelling', frameId: 2 });
+  const delivered = h.calls.find(call => call[0] === 'tab-message');
+  assert.equal(delivered[2].locked, false);
+});
+test('dialog button request opens the extension settings page', async () => {
+  const h = harness();
+  let opened = 0;
+  h.context.chrome.runtime.openOptionsPage = async () => { opened += 1; };
+  const response = await h.message({ type: 'md-ai-open-settings' }, { tab: { id: 7 }, frameId: 0 });
+  assert.equal(response.ok, true);
+  assert.equal(opened, 1);
+});
 test('AI requests read stored source, persist result and apply only confirmed result', async () => {
   const h = harness({ 'aiJob:id': job() });
   h.local[ai.KEY] = { baseUrl: 'https://example.test/v1', apiKey: 'test-secret', model: 'model' };

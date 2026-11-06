@@ -15,6 +15,7 @@
     'content/ai-shortcuts.js'
   ];
   const SETTINGS_KEY = 'mdExporterSettings';
+  const AI_KEY = 'mdExporterAI';
   const ONBOARDING_KEY = 'mdExporterOnboardingSeen';
   const STORIES = [
     { visual: 'connection', title: 'Работает с вашим Confluence', text: 'Просто откройте нужную страницу — домен определять и настраивать не нужно. Подключите своего AI-провайдера через кнопку с шестерёнкой.' },
@@ -121,11 +122,21 @@
   let checkboxEls = new Map();
   let running = false;
   let importing = false;
+  let aiLocked = false;
+
+  function updateAILock(settings) {
+    aiLocked = !(settings && typeof settings.apiKey === 'string' && settings.apiKey.trim());
+    el.aiFeatures.classList.toggle('is-locked', aiLocked);
+    el.aiLock.classList.toggle('hidden', !aiLocked);
+    document.querySelectorAll('#aiPanel [data-ai-action]').forEach(function (button) {
+      button.disabled = aiLocked;
+    });
+  }
 
   function cacheElements() {
     [
       'refresh', 'aiTab', 'exportTab', 'importTab', 'aiPanel', 'exportPanel', 'importPanel',
-      'alert', 'settings', 'treeBlock', 'tree',
+      'alert', 'settings', 'treeBlock', 'tree', 'aiFeatures', 'aiLock', 'aiLockOpenSettings',
       'treeInfo', 'selectAll', 'selectNone', 'settingsAttachments', 'attachments',
       'outputHint', 'download', 'downloadLabel', 'cancel', 'progressBlock', 'progressFill',
       'progressText', 'errorsToggle', 'errors', 'importCard', 'markdownFile',
@@ -226,7 +237,7 @@
     } catch (error) {
       showAlert(error.message || 'Не удалось открыть AI-редактор.');
     } finally {
-      buttons.forEach(function (item) { item.disabled = false; });
+      buttons.forEach(function (item) { item.disabled = aiLocked; });
       if (button) button.classList.remove('is-busy');
     }
   }
@@ -807,6 +818,15 @@
       if (change && change.newValue) applyJob(change.newValue);
     });
 
+    chrome.storage.onChanged.addListener(function (changes, area) {
+      if (area !== 'local' || !changes[AI_KEY]) return;
+      updateAILock(changes[AI_KEY].newValue);
+    });
+
+    el.aiLockOpenSettings.addEventListener('click', function () {
+      chrome.runtime.openOptionsPage();
+    });
+
     chrome.runtime.onMessage.addListener(function (message) {
       if (!message || message.type !== 'MD_EXPORT_JOB_UPDATE' || message.tabId !== tabId || !message.job) return;
       applyJob(message.job);
@@ -831,6 +851,9 @@
     await loadSettings();
     updateFilePicker();
     el.treeBlock.classList.toggle('hidden', currentMode() !== 'tree');
+    chrome.storage.local.get(AI_KEY, function (data) {
+      updateAILock(data && data[AI_KEY]);
+    });
 
     const ping = await ensureContentScript();
     if (!ping || !ping.ok) {

@@ -34,16 +34,20 @@ async function scenariosForUI() {
   const stored = (await chrome.storage.local.get(MDExporterAIScenarios.KEY))[MDExporterAIScenarios.KEY];
   return { presets: MDExporterAIScenarios.PRESETS, custom: MDExporterAIScenarios.sanitize(stored) };
 }
+async function aiLocked() {
+  const stored = (await chrome.storage.local.get(MDExporterAI.KEY))[MDExporterAI.KEY];
+  return !stored || typeof stored.apiKey !== 'string' || !stored.apiKey.trim();
+}
 function aiUIFiles(action) {
   return ['lib/ai-rich-text.js', 'lib/ai-preview.js', ...(action === 'diagram' ? ['lib/mermaid.min.js'] : []), 'content/ai-ui.js'];
 }
-async function showAIDialog(tabId, action, snapshot, error) {
+async function showAIDialog(tabId, action, snapshot, error, locked) {
   try {
     await chrome.scripting.executeScript({ target: { tabId, frameIds: [0] }, files: aiUIFiles(action) });
     let scenarios = { presets: MDExporterAIScenarios.PRESETS, custom: [] };
     try { scenarios = await scenariosForUI(); } catch (_) { /* Dialog remains usable without saved scenarios. */ }
     await chrome.tabs.sendMessage(tabId, {
-      type: 'md-ai-open', action, snapshot, error,
+      type: 'md-ai-open', action, snapshot, error, locked,
       shortcut: MDExporterAIShortcuts.label(action), scenarios
     }, { frameId: 0 });
   } catch (failure) {
@@ -54,15 +58,18 @@ async function showAIDialog(tabId, action, snapshot, error) {
 async function openAI(tabId, frameId, action) {
   const target = { tabId, frameIds: [frameId] };
   let snapshot, error;
+  let locked = false;
   try {
     await chrome.scripting.executeScript({ target, world: 'MAIN', files: ['lib/ai-rich-text.js', 'content/ai-selection.js'] });
     snapshot = await inEditor(tabId, frameId, 'capture', [action]);
     await chrome.storage.session.set({ ['aiJob:' + snapshot.id]: { tabId, frameId, uiFrameId: 0, action, source: snapshot.source, readOnly: !!snapshot.readOnly, created: Date.now() } });
+    locked = await aiLocked();
   } catch (failure) { error = failure.message; }
-  await showAIDialog(tabId, action, snapshot, error);
+  await showAIDialog(tabId, action, snapshot, error, locked);
 }
 async function openAIFromPanel(tabId, action) {
   let snapshot, error;
+  let locked = false;
   try {
     await chrome.scripting.executeScript({ target: { tabId, allFrames: true }, world: 'MAIN', files: ['lib/ai-rich-text.js', 'content/ai-selection.js'] });
     const captures = await chrome.scripting.executeScript({
@@ -80,8 +87,9 @@ async function openAIFromPanel(tabId, action) {
     }
     snapshot = captured.result.value;
     await chrome.storage.session.set({ ['aiJob:' + snapshot.id]: { tabId, frameId: captured.frameId, uiFrameId: 0, action, source: snapshot.source, readOnly: !!snapshot.readOnly, created: Date.now() } });
+    locked = await aiLocked();
   } catch (failure) { error = failure.message; }
-  await showAIDialog(tabId, action, snapshot, error);
+  await showAIDialog(tabId, action, snapshot, error, locked);
 }
 chrome.contextMenus.onClicked.addListener(async (info, tab) => {
   if (!String(info.menuItemId).startsWith('md-ai-') || !tab || tab.id == null) return;
@@ -90,6 +98,11 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
   await openAI(tab.id, info.frameId || 0, action);
 });
 chrome.runtime.onMessage.addListener((message, sender, respond) => {
+  if (message && message.type === 'md-ai-open-settings' && sender.tab) {
+    chrome.runtime.openOptionsPage();
+    respond({ ok: true });
+    return true;
+  }
   if (message && message.type === 'md-ai-save-scenario' && sender.tab) {
     (async () => {
       const name = typeof message.name === 'string' ? message.name.trim() : '';
