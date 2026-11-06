@@ -1,7 +1,6 @@
 'use strict';
 importScripts('lib/ai-rich-text.js', 'lib/ai-client.js', 'lib/ai-scenarios.js');
 const AI_COMMANDS = {
-  review: 'Проверить полноту требований…',
   spelling: 'Исправить орфографию и пунктуацию', json: 'Изменить или дополнить JSON/XML…',
   diagram: 'Исправить PlantUML/Mermaid…',
   custom: 'Свободная инструкция…', format: 'Изменить оформление текста…', table: 'Изменить выделенные ячейки таблицы…'

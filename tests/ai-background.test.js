@@ -41,7 +41,7 @@ function harness(session = {}) {
 function job(extra = {}) { return { tabId: 7, frameId: 2, action: 'spelling', source: 'Превет', created: Date.now(), ...extra }; }
 test('AI menus include all predefined and custom actions', () => {
   const h = harness(); h.menus();
-  assert.deepEqual(h.created.map(item => item.id), ['md-exporter-ai', ...Object.keys(ai.ACTIONS).map(action => 'md-ai-' + action)]);
+  assert.deepEqual(h.created.map(item => item.id), ['md-exporter-ai', ...Object.keys(ai.ACTIONS).filter(action => action !== 'review').map(action => 'md-ai-' + action)]);
   assert(!Object.keys(ai.ACTIONS).includes('plantuml'));
   assert(!Object.keys(ai.ACTIONS).includes('mermaid'));
 });
@@ -162,7 +162,10 @@ test('cancellation removes pending request state', async () => {
   assert.equal((await h.message({ type: 'md-ai-apply', id: 'id' })).ok, false);
 });
 test('all context actions capture in the clicked iframe but open their dialog in the top frame', async () => {
-  for (const action of Object.keys(ai.ACTIONS)) {
+  const probe = harness();
+  probe.menus();
+  for (const item of probe.created.filter(entry => entry.id.startsWith('md-ai-'))) {
+    const action = item.id.slice(6);
     const h = harness();
     await h.click({ menuItemId: 'md-ai-' + action, frameId: 2 });
     const capture = h.calls.find(call => call[0] === 'script' && call[1].args && call[1].args[0] === 'capture')[1];

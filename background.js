@@ -21,7 +21,7 @@ if (chrome.sidePanel && chrome.sidePanel.setPanelBehavior) {
 chrome.runtime.onMessage.addListener(function (message, sender, respond) {
   if (!message || message.type !== 'md-ai-open-panel') return;
   const tabId = Number(message.tabId);
-  if (!Number.isInteger(tabId) || !AI_COMMANDS[message.action]) {
+  if (!Number.isInteger(tabId) || !MDExporterAI.ACTIONS[message.action]) {
     respond({ ok: false, error: 'Некорректная команда AI.' });
     return;
   }

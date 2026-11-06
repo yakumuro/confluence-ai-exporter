@@ -67,29 +67,31 @@ test('JSON/XML action detects and validates the original structured format', asy
 test('requirements review returns a normalized score and actionable recommendations', async () => {
   const response = {
     score: 67.6,
-    summary: 'Основной сценарий описан, но не хватает критериев приемки.',
+    summary: 'Основной сценарий описан, но не хватает критериев приёмки.',
     recommendations: [
-      { text: 'Добавьте измеримые критерии приемки.', impact: 12.4 },
-      { text: 'Опишите поведение при недоступности сервиса.', impact: 99 }
+      { category: 'Критерии приёмки', severity: 'major', problem: 'Нет измеримых критериев приёмки.', evidence: 'Система должна быстро сохранять документ.', fix: 'Добавьте измеримые критерии приёмки.' },
+      { category: 'Граничные случаи', severity: 'blocker', problem: 'Не описано поведение при недоступности сервиса.', evidence: 'При сбое сервиса…', fix: 'Опишите поведение при недоступности сервиса.' },
+      { category: 'Терминология', severity: 'minor', problem: 'Термин «документ» используется в двух значениях.', evidence: 'Документ пользователя…', fix: 'Введите отдельные термины.' }
     ]
   };
   const result = await ai.transform(settings, 'review', 'Система должна сохранять документ.', '', async (url, options) => {
     const body = JSON.parse(options.body);
     assert.match(body.messages[0].content, /атомарность/);
     assert.match(body.messages[0].content, /тестируемость/);
-    assert.deepEqual(JSON.parse(body.messages[1].content).selection, 'Система должна сохранять документ.');
+    assert.deepEqual(JSON.parse(body.messages[1].content), { instruction: '', document: 'Система должна сохранять документ.' });
     return reply(JSON.stringify(response))();
   });
   assert.deepEqual(result, {
     format: 'review', score: 68, summary: response.summary,
     recommendations: [
-      { text: response.recommendations[0].text, impact: 12 },
-      { text: response.recommendations[1].text, impact: 30 }
+      { category: 'граничные случаи', severity: 'blocker', problem: response.recommendations[1].problem, evidence: response.recommendations[1].evidence, fix: response.recommendations[1].fix, impact: 30 },
+      { category: 'критерии приёмки', severity: 'major', problem: response.recommendations[0].problem, evidence: response.recommendations[0].evidence, fix: response.recommendations[0].fix, impact: 15 },
+      { category: 'терминология', severity: 'minor', problem: response.recommendations[2].problem, evidence: response.recommendations[2].evidence, fix: response.recommendations[2].fix, impact: 5 }
     ]
   });
 });
 test('requirements review accepts fenced JSON and rejects incomplete analysis', async () => {
-  const valid = { score: 85, summary: 'Документ почти готов.', recommendations: [{ text: 'Уточните ограничения.', impact: 5 }] };
+  const valid = { score: 85, summary: 'Документ почти готов.', recommendations: [{ category: 'полнота', severity: 'minor', problem: 'Уточните ограничения.', evidence: 'Система работает быстро.', fix: 'Добавьте ограничения по времени отклика.' }] };
   const fenced = await ai.transform(settings, 'review', 'Требование', '', reply('```json\n' + JSON.stringify(valid) + '\n```'));
   assert.equal(fenced.format, 'review');
   assert.equal(fenced.score, 85);
@@ -100,7 +102,10 @@ test('requirements review accepts fenced JSON and rejects incomplete analysis', 
     JSON.stringify({ ...valid, score: 101 }),
     JSON.stringify({ ...valid, summary: '' }),
     JSON.stringify({ ...valid, recommendations: [] }),
-    JSON.stringify({ ...valid, recommendations: [{ text: '', impact: 5 }] })
+    JSON.stringify({ ...valid, recommendations: [{ category: 'полнота', severity: 'minor', problem: '', evidence: 'цитата', fix: 'исправление' }] }),
+    JSON.stringify({ ...valid, recommendations: [{ category: 'полнота', severity: 'minor', problem: 'проблема', evidence: '', fix: 'исправление' }] }),
+    JSON.stringify({ ...valid, recommendations: [{ category: 'полнота', severity: 'minor', problem: 'проблема', evidence: 'цитата', fix: '' }] }),
+    JSON.stringify({ ...valid, recommendations: [{ category: 'полнота', severity: 'critical', problem: 'проблема', evidence: 'цитата', fix: 'исправление' }] })
   ]) {
     await assert.rejects(ai.transform(settings, 'review', 'Требование', '', reply(response)));
   }
@@ -122,7 +127,7 @@ test('HTTP error messages never include a provider body or credentials', async (
   await assert.rejects(ai.models(settings, async () => new Response('', { status: 429 })), /Лимит/);
 });
 test('reports timeouts without credentials', async () => {
-  await assert.rejects(ai.models(settings, async () => { const error = new Error('aborted'); error.name = 'AbortError'; throw error; }), /25 секунд/);
+  await assert.rejects(ai.models(settings, async () => { const error = new Error('aborted'); error.name = 'AbortError'; throw error; }), /120 секунд/);
 });
 const source = { cells: [{ id: 'c0', text: 'да' }, { id: 'c1', text: 'нет' }] };
 test('table edits accept only selected cells, safe text and hex colors', async () => {
