@@ -6,7 +6,7 @@ const vm = require('node:vm');
 const ai = require('../lib/ai-client');
 const scenariosApi = require('../lib/ai-scenarios');
 function harness(session = {}) {
-  let listener, click;
+  let listener, click, alarmListener;
   const calls = [], local = {}, created = [];
   const storage = values => ({
     get: async key => key === null ? { ...values } : { [key]: values[key] },
@@ -21,12 +21,19 @@ function harness(session = {}) {
     showBadge() {},
     chrome: {
       contextMenus: { create: data => created.push(data), onClicked: { addListener: fn => { click = fn; } } },
-      scripting: { executeScript: async request => { calls.push(['script', request]); return [{ result: { ok: true, value: request.args && request.args[0] === 'capture' ? { id: 'captured', source: 'Превет' } : { ok: true } } }]; } },
-      tabs: { sendMessage: async (...args) => { calls.push(['tab-message', ...args]); } },
+      scripting: { executeScript: async request => {
+        calls.push(['script', request]);
+        const captured = request.args && (request.args[0] === 'capture' || (typeof request.args[0] === 'string' && ai.ACTIONS[request.args[0]]));
+        return [{ frameId: 2, result: { ok: true, value: captured ? { id: 'captured', source: 'Превет', editable: true } : { ok: true } } }];
+      } },
+      tabs: {
+        sendMessage: async (...args) => { calls.push(['tab-message', ...args]); },
+        get: async tabId => ({ id: tabId, url: 'https://confluence.example/pages/123' })
+      },
       storage: { local: storage(local), session: storage(session) },
       permissions: { contains: async () => true },
       runtime: { onMessage: { addListener: fn => { listener = fn; } } },
-      alarms: { create() {}, onAlarm: { addListener() {} } }
+      alarms: { create() {}, onAlarm: { addListener: fn => { alarmListener = fn; } } }
     }
   };
   vm.runInNewContext(fs.readFileSync(require.resolve('../ai-background'), 'utf8'), context);
@@ -35,15 +42,30 @@ function harness(session = {}) {
     context, calls, local, session, created,
     message: (message, from = sender) => new Promise(resolve => { if (listener(message, from, resolve) !== true) resolve(undefined); }),
     menus: () => context.createAIMenus(),
-    click: (info, tab = { id: 7 }) => click(info, tab)
+    click: (info, tab = { id: 7 }) => click(info, tab),
+    cleanup: () => alarmListener({ name: 'md-ai-cleanup' })
   };
 }
 function job(extra = {}) { return { tabId: 7, frameId: 2, action: 'spelling', source: 'Превет', created: Date.now(), ...extra }; }
+function tasksJob(extra = {}) {
+  return job({
+    action: 'tasks', uiFrameId: 0, readOnly: true, conversation: [], stage: 'propose',
+    pageUrl: 'https://confluence.example/pages/123', insertable: true, ...extra
+  });
+}
+const proposalReply = { total: 2, roles: [{ role: 'back-end', count: 2 }], tasks: [{ title: 'A', role: 'back-end', description: 'd' }, { title: 'B', role: 'back-end', description: 'e' }] };
+const docReply = { tasks: [{ number: 1, title: 'A', role: 'back-end', goal: 'g', steps: ['s1', 's2'] }] };
+const generatedResult = ai.tasksResult(JSON.stringify(docReply), 'generate');
+// Session storage values are created inside the vm context, so their
+// prototypes differ from this realm's: compare them through JSON.
+const plain = value => JSON.parse(JSON.stringify(value));
+const tasksSender = { tab: { id: 7 }, frameId: 0 };
 test('AI menus include all predefined and custom actions', () => {
   const h = harness(); h.menus();
-  assert.deepEqual(h.created.map(item => item.id), ['md-exporter-ai', ...Object.keys(ai.ACTIONS).filter(action => action !== 'review').map(action => 'md-ai-' + action)]);
+  assert.deepEqual(h.created.map(item => item.id), ['md-exporter-ai', ...Object.keys(ai.ACTIONS).filter(action => action !== 'review' && action !== 'tasks').map(action => 'md-ai-' + action)]);
   assert(!Object.keys(ai.ACTIONS).includes('plantuml'));
   assert(!Object.keys(ai.ACTIONS).includes('mermaid'));
+  assert(!h.created.some(item => item.id === 'md-ai-tasks'));
 });
 test('export persistence is relayed to the sender tab key, not arbitrary storage keys', async () => {
   const h = harness();
@@ -245,4 +267,214 @@ test('top-frame dialog cancellation discards the selection in its original ifram
   assert.equal((await h.message({ type: 'md-ai-close', id: 'id' }, { tab: { id: 7 }, frameId: 0 })).ok, true);
   const execution = h.calls.find(call => call[0] === 'script')[1];
   assert.equal(execution.args[0], 'discard'); assert.equal(execution.target.frameIds[0], 2);
+});
+test('panel tasks action stores conversation, stage, pageUrl and insertable flag', async () => {
+  const h = harness();
+  await h.context.openAIFromPanel(7, 'tasks');
+  const stored = h.session['aiJob:captured'];
+  assert.equal(stored.action, 'tasks');
+  assert.deepEqual(plain(stored.conversation), []);
+  assert.equal(stored.stage, 'propose');
+  assert.equal(stored.pageUrl, 'https://confluence.example/pages/123');
+  assert.equal(stored.insertable, true);
+  const delivered = h.calls.find(call => call[0] === 'tab-message');
+  assert.equal(delivered[2].pageUrl, 'https://confluence.example/pages/123');
+  assert.equal(delivered[2].insertable, true);
+});
+test('tasks propose run sends the selection as data and stores the growing history', async () => {
+  const h = harness({ 'aiJob:id': tasksJob() });
+  h.local[ai.KEY] = { baseUrl: 'https://example.test/v1', apiKey: 'secret', model: 'model' };
+  const seen = [], reply = JSON.stringify({ total: 1, roles: [{ role: 'back-end', count: 1 }], tasks: [{ title: 'A', role: 'back-end', description: 'd' }] });
+  h.context.MDExporterAI.chat = async (settings, messages) => { seen.push(messages); return reply; };
+  const response = await h.message({ type: 'md-ai-run', id: 'id', prompt: '' }, tasksSender);
+  assert.equal(response.ok, true);
+  assert.equal(response.stage, 'propose');
+  assert.equal(response.result.format, 'tasks');
+  assert.equal(response.result.total, 1);
+  assert.equal(seen[0][0].role, 'system');
+  assert.deepEqual(JSON.parse(seen[0][1].content), { instruction: 'Предложи декомпозицию выделенного текста на задачи разработки.', selection: 'Превет' });
+  const stored = h.session['aiJob:id'];
+  assert.equal(stored.stage, 'propose');
+  assert.deepEqual(plain(stored.conversation), plain([seen[0][1], { role: 'assistant', content: reply }]));
+});
+test('tasks iteration appends the user comment to the full stored history', async () => {
+  const history = [
+    { role: 'user', content: JSON.stringify({ instruction: 'Предложи декомпозицию выделенного текста на задачи разработки.', selection: 'Превет' }) },
+    { role: 'assistant', content: JSON.stringify(proposalReply) }
+  ];
+  const h = harness({ 'aiJob:id': tasksJob({ conversation: history }) });
+  h.local[ai.KEY] = { baseUrl: 'https://example.test/v1', apiKey: 'secret', model: 'model' };
+  const seen = [], reply = JSON.stringify(proposalReply);
+  h.context.MDExporterAI.chat = async (settings, messages) => { seen.push(messages); return reply; };
+  const response = await h.message({ type: 'md-ai-run', id: 'id', prompt: 'Убери роль QA' }, tasksSender);
+  assert.equal(response.ok, true);
+  assert.deepEqual(plain(seen[0].slice(1)), plain([...history, { role: 'user', content: 'Убери роль QA' }]));
+  assert.equal(h.session['aiJob:id'].conversation.length, 4);
+  assert.equal(h.session['aiJob:id'].conversation[3].content, reply);
+});
+test('tasks run with malformed model JSON is rejected and the history is kept', async () => {
+  const history = [{ role: 'user', content: 'u' }, { role: 'assistant', content: 'a' }];
+  const h = harness({ 'aiJob:id': tasksJob({ conversation: history }) });
+  h.local[ai.KEY] = { baseUrl: 'https://example.test/v1', apiKey: 'secret', model: 'model' };
+  h.context.MDExporterAI.chat = async () => 'not json';
+  const response = await h.message({ type: 'md-ai-run', id: 'id', prompt: 'правка' }, tasksSender);
+  assert.equal(response.ok, false);
+  assert.match(response.error, /неверном формате/);
+  assert.deepEqual(plain(h.session['aiJob:id'].conversation), history);
+  assert.equal(h.session['aiJob:id'].result, undefined);
+});
+test('tasks iteration without a comment is rejected and the history is kept', async () => {
+  const history = [{ role: 'user', content: 'u' }, { role: 'assistant', content: 'a' }];
+  const h = harness({ 'aiJob:id': tasksJob({ conversation: history }) });
+  h.local[ai.KEY] = { baseUrl: 'https://example.test/v1', apiKey: 'secret', model: 'model' };
+  const response = await h.message({ type: 'md-ai-run', id: 'id', prompt: '   ' }, tasksSender);
+  assert.equal(response.ok, false);
+  assert.match(response.error, /изменить в декомпозиции|Создать задачи/);
+  assert.deepEqual(plain(h.session['aiJob:id'].conversation), history);
+});
+test('tasks generate flag switches the job to the generation stage with the page URL', async () => {
+  const history = [{ role: 'user', content: 'u' }, { role: 'assistant', content: 'Декомпозиция v2' }];
+  const h = harness({ 'aiJob:id': tasksJob({ conversation: history }) });
+  h.local[ai.KEY] = { baseUrl: 'https://example.test/v1', apiKey: 'secret', model: 'model' };
+  const seen = [], reply = JSON.stringify(docReply);
+  h.context.MDExporterAI.chat = async (settings, messages) => { seen.push(messages); return reply; };
+  const response = await h.message({ type: 'md-ai-run', id: 'id', stage: 'generate', prompt: '' }, tasksSender);
+  assert.equal(response.ok, true);
+  assert.equal(response.stage, 'generate');
+  assert.equal(response.result.format, 'tasks');
+  assert.match(seen[0][0].content, /Ссылка на документацию, которую система подставит в каждую задачу: https:\/\/confluence\.example\/pages\/123/);
+  assert.match(seen[0][0].content, /"steps"/);
+  assert.deepEqual(plain(seen[0].slice(1, -1)), history);
+  assert.match(seen[0][seen[0].length - 1].content, /согласована/);
+  const stored = h.session['aiJob:id'];
+  assert.equal(stored.stage, 'generate');
+  assert.equal(stored.conversation.length, 4);
+  assert.equal(stored.result.tasks.length, 1);
+  assert.equal(stored.conversation[3].content, reply);
+});
+test('tasks results are never applied over the document', async () => {
+  const h = harness({ 'aiJob:id': tasksJob({ readOnly: false, result: generatedResult }) });
+  const response = await h.message({ type: 'md-ai-apply', id: 'id' }, tasksSender);
+  assert.equal(response.ok, false);
+  assert.match(response.error, /не предназначены для замены/);
+  assert.equal(h.calls.filter(call => call[0] === 'script').length, 0);
+  assert.equal(h.session['aiJob:id'].result, generatedResult);
+});
+test('tasks chapter is inserted into the editor as a validated rich document', async () => {
+  const h = harness({ 'aiJob:id': tasksJob({ stage: 'generate', result: generatedResult }) });
+  const response = await h.message({ type: 'md-ai-insert', id: 'id' }, tasksSender);
+  assert.equal(response.ok, true);
+  const execution = h.calls.find(call => call[0] === 'script')[1];
+  assert.equal(execution.args[0], 'insertChapter');
+  assert.equal(execution.args[1][0], 'id');
+  assert.equal(execution.target.frameIds[0], 2);
+  assert.equal(execution.world, 'MAIN');
+  const chapter = execution.args[1][1];
+  assert.equal(chapter.type, 'doc');
+  const rich = require('../lib/ai-rich-text');
+  assert.match(rich.text(chapter), /Задачи на разработку/);
+  assert.match(rich.text(chapter), /confluence\.example\/pages\/123/);
+  assert.equal(chapter.content[1].type, 'heading');
+  assert.equal(chapter.content[1].content[0].text, 'Задача 1. A');
+});
+test('tasks chapter insert requires the generate stage and an editable page', async () => {
+  const early = harness({ 'aiJob:id': tasksJob() });
+  const before = await early.message({ type: 'md-ai-insert', id: 'id' }, tasksSender);
+  assert.equal(before.ok, false);
+  assert.match(before.error, /Создать задачи/);
+  assert.equal(early.calls.filter(call => call[0] === 'script').length, 0);
+
+  const readOnlyPage = harness({ 'aiJob:id': tasksJob({ stage: 'generate', result: generatedResult, insertable: false }) });
+  const rejected = await readOnlyPage.message({ type: 'md-ai-insert', id: 'id' }, tasksSender);
+  assert.equal(rejected.ok, false);
+  assert.match(rejected.error, /недоступна для редактирования/);
+  assert.equal(readOnlyPage.calls.filter(call => call[0] === 'script').length, 0);
+  assert.equal(readOnlyPage.session['aiJob:id'].result, generatedResult);
+});
+const reviewResult = ai.reviewResult(JSON.stringify({
+  score: 65, summary: 'Есть пробелы в критериях приёмки.',
+  recommendations: [{ category: 'критерии приёмки', severity: 'major', problem: 'Добавьте измеримые критерии.', evidence: 'Система должна работать быстро.', fix: 'Опишите критерии в разделе 3.' }]
+}));
+function reviewJob(extra = {}) {
+  return job({
+    action: 'review', uiFrameId: 0, readOnly: false,
+    pageUrl: 'https://confluence.example/pages/123', insertable: true, ...extra
+  });
+}
+test('panel review action stores pageUrl and the insertable flag', async () => {
+  const h = harness();
+  await h.context.openAIFromPanel(7, 'review');
+  const stored = h.session['aiJob:captured'];
+  assert.equal(stored.action, 'review');
+  assert.equal(stored.pageUrl, 'https://confluence.example/pages/123');
+  assert.equal(stored.insertable, true);
+  const delivered = h.calls.find(call => call[0] === 'tab-message');
+  assert.equal(delivered[2].pageUrl, 'https://confluence.example/pages/123');
+  assert.equal(delivered[2].insertable, true);
+});
+test('review report is inserted into the editor as a validated rich document', async () => {
+  const h = harness({ 'aiJob:id': reviewJob({ result: reviewResult }) });
+  const response = await h.message({ type: 'md-ai-insert', id: 'id' }, tasksSender);
+  assert.equal(response.ok, true);
+  const execution = h.calls.find(call => call[0] === 'script')[1];
+  assert.equal(execution.args[0], 'insertChapter');
+  assert.equal(execution.args[1][0], 'id');
+  assert.equal(execution.target.frameIds[0], 2);
+  assert.equal(execution.world, 'MAIN');
+  const chapter = execution.args[1][1];
+  assert.equal(chapter.type, 'doc');
+  const rich = require('../lib/ai-rich-text');
+  assert.match(rich.text(chapter), /Проверка качества документации/);
+  assert.match(rich.text(chapter), /Готовность к разработке: 65%/);
+  assert.equal(chapter.content[2].type, 'heading');
+  assert.equal(chapter.content[2].content[0].text, '1. [критерии приёмки · major]');
+});
+test('review report insert requires a finished analysis, an editable page and a review job', async () => {
+  const early = harness({ 'aiJob:id': reviewJob() });
+  const before = await early.message({ type: 'md-ai-insert', id: 'id' }, tasksSender);
+  assert.equal(before.ok, false);
+  assert.match(before.error, /Проверить документ/);
+  assert.equal(early.calls.filter(call => call[0] === 'script').length, 0);
+
+  const readOnlyPage = harness({ 'aiJob:id': reviewJob({ result: reviewResult, insertable: false }) });
+  const rejected = await readOnlyPage.message({ type: 'md-ai-insert', id: 'id' }, tasksSender);
+  assert.equal(rejected.ok, false);
+  assert.match(rejected.error, /недоступна для редактирования/);
+  assert.equal(readOnlyPage.calls.filter(call => call[0] === 'script').length, 0);
+  assert.equal(readOnlyPage.session['aiJob:id'].result, reviewResult);
+
+  const other = harness({ 'aiJob:id': job({ uiFrameId: 0, result: 'text' }) });
+  const denied = await other.message({ type: 'md-ai-insert', id: 'id' }, tasksSender);
+  assert.equal(denied.ok, false);
+  assert.match(denied.error, /задач на разработку и проверки качества/);
+  assert.equal(other.calls.filter(call => call[0] === 'script').length, 0);
+});
+test('tasks jobs live for an hour while point edits live for ten minutes', async () => {
+  const h = harness({ 'aiJob:id': tasksJob({ created: Date.now() - 30 * 60 * 1000 }) });
+  h.local[ai.KEY] = { baseUrl: 'https://example.test/v1', apiKey: 'secret', model: 'model' };
+  h.context.MDExporterAI.chat = async () => JSON.stringify({ total: 1, roles: [], tasks: [{ title: 'A', role: 'r', description: 'd' }] });
+  assert.equal((await h.message({ type: 'md-ai-run', id: 'id', prompt: '' }, tasksSender)).ok, true);
+
+  const stale = harness({ 'aiJob:id': tasksJob({ created: Date.now() - 61 * 60 * 1000 }) });
+  stale.local[ai.KEY] = { baseUrl: 'https://example.test/v1', apiKey: 'secret', model: 'model' };
+  const rejected = await stale.message({ type: 'md-ai-run', id: 'id', prompt: '' }, tasksSender);
+  assert.equal(rejected.ok, false);
+  assert.match(rejected.error, /устарел/);
+
+  const oldEdit = harness({ 'aiJob:id': job({ created: Date.now() - 11 * 60 * 1000 }) });
+  oldEdit.local[ai.KEY] = { baseUrl: 'https://example.test/v1', apiKey: 'secret', model: 'model' };
+  const expired = await oldEdit.message({ type: 'md-ai-run', id: 'id' });
+  assert.equal(expired.ok, false);
+  assert.match(expired.error, /устарел/);
+});
+test('cleanup alarm removes expired jobs but keeps fresh tasks jobs', async () => {
+  const h = harness({
+    'aiJob:old': job({ created: Date.now() - 11 * 60 * 1000 }),
+    'aiJob:old-tasks': tasksJob({ created: Date.now() - 61 * 60 * 1000 }),
+    'aiJob:fresh-tasks': tasksJob({ created: Date.now() - 30 * 60 * 1000 })
+  });
+  await h.cleanup();
+  assert.equal(h.session['aiJob:old'], undefined);
+  assert.equal(h.session['aiJob:old-tasks'], undefined);
+  assert.ok(h.session['aiJob:fresh-tasks']);
 });

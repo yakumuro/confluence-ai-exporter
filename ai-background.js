@@ -1,5 +1,9 @@
 'use strict';
 importScripts('lib/ai-rich-text.js', 'lib/ai-client.js', 'lib/ai-scenarios.js');
+const JOB_TTL = 10 * 60 * 1000;
+// Режим «Задачи на разработку» предполагает обдумывание декомпозиции.
+const TASKS_JOB_TTL = 60 * 60 * 1000;
+function jobTtl(job) { return job && job.action === 'tasks' ? TASKS_JOB_TTL : JOB_TTL; }
 const AI_COMMANDS = {
   spelling: 'Исправить орфографию и пунктуацию', json: 'Изменить или дополнить JSON/XML…',
   diagram: 'Исправить PlantUML/Mermaid…',
@@ -40,13 +44,13 @@ async function aiLocked() {
 function aiUIFiles(action) {
   return ['lib/ai-rich-text.js', 'lib/ai-preview.js', ...(action === 'diagram' ? ['lib/mermaid.min.js'] : []), 'content/ai-ui.js'];
 }
-async function showAIDialog(tabId, action, snapshot, error, locked) {
+async function showAIDialog(tabId, action, snapshot, error, locked, pageUrl, insertable) {
   try {
     await chrome.scripting.executeScript({ target: { tabId, frameIds: [0] }, files: aiUIFiles(action) });
     let scenarios = { presets: MDExporterAIScenarios.PRESETS, custom: [] };
     try { scenarios = await scenariosForUI(); } catch (_) { /* Dialog remains usable without saved scenarios. */ }
     await chrome.tabs.sendMessage(tabId, {
-      type: 'md-ai-open', action, snapshot, error, locked, scenarios
+      type: 'md-ai-open', action, snapshot, error, locked, scenarios, pageUrl, insertable
     }, { frameId: 0 });
   } catch (failure) {
     showBadge(tabId, '!', '#de350b');
@@ -66,7 +70,8 @@ async function openAI(tabId, frameId, action) {
   await showAIDialog(tabId, action, snapshot, error, locked);
 }
 async function openAIFromPanel(tabId, action) {
-  let snapshot, error;
+  let snapshot, error, pageUrl;
+  let insertable = false;
   let locked = false;
   try {
     await chrome.scripting.executeScript({ target: { tabId, allFrames: true }, world: 'MAIN', files: ['lib/ai-rich-text.js', 'content/ai-selection.js'] });
@@ -84,10 +89,18 @@ async function openAIFromPanel(tabId, action) {
       throw new Error(failure ? failure.result.error : 'Выделите текст в редакторе Confluence.');
     }
     snapshot = captured.result.value;
-    await chrome.storage.session.set({ ['aiJob:' + snapshot.id]: { tabId, frameId: captured.frameId, uiFrameId: 0, action, source: snapshot.source, readOnly: !!snapshot.readOnly, created: Date.now() } });
+    const tab = await chrome.tabs.get(tabId);
+    pageUrl = tab && typeof tab.url === 'string' ? tab.url : '';
+    insertable = (action === 'tasks' || action === 'review') && snapshot.editable === true;
+    await chrome.storage.session.set({ ['aiJob:' + snapshot.id]: {
+      tabId, frameId: captured.frameId, uiFrameId: 0, action, source: snapshot.source, readOnly: !!snapshot.readOnly,
+      ...(action === 'tasks'
+        ? { conversation: [], stage: 'propose', pageUrl, insertable }
+        : action === 'review' ? { pageUrl, insertable } : {}), created: Date.now()
+    } });
     locked = await aiLocked();
   } catch (failure) { error = failure.message; }
-  await showAIDialog(tabId, action, snapshot, error, locked);
+  await showAIDialog(tabId, action, snapshot, error, locked, pageUrl, insertable);
 }
 chrome.contextMenus.onClicked.addListener(async (info, tab) => {
   if (!String(info.menuItemId).startsWith('md-ai-') || !tab || tab.id == null) return;
@@ -137,11 +150,11 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
     chrome.storage.local.set({ ['job:' + sender.tab.id]: message.job }).then(() => respond({ ok: true }), () => respond({ ok: false }));
     return true;
   }
-  if (!message || !['md-ai-run', 'md-ai-apply', 'md-ai-close'].includes(message.type) || !sender.tab) return;
+  if (!message || !['md-ai-run', 'md-ai-apply', 'md-ai-insert', 'md-ai-close'].includes(message.type) || !sender.tab) return;
   (async () => {
     const key = 'aiJob:' + message.id;
     const job = (await chrome.storage.session.get(key))[key];
-    if (!job || job.tabId !== sender.tab.id || (job.uiFrameId ?? job.frameId) !== sender.frameId || Date.now() - job.created > 600000) throw new Error('Запрос устарел. Выделите фрагмент заново.');
+    if (!job || job.tabId !== sender.tab.id || (job.uiFrameId ?? job.frameId) !== sender.frameId || Date.now() - job.created > jobTtl(job)) throw new Error('Запрос устарел. Выделите фрагмент заново.');
     if (message.type === 'md-ai-close') {
       await chrome.storage.session.remove(key);
       await inEditor(job.tabId, job.frameId, 'discard', [message.id]);
@@ -150,6 +163,7 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
     if (message.type === 'md-ai-apply') {
       if (job.readOnly) throw new Error('Этот фрагмент доступен только для анализа и копирования результата.');
       if (job.action === 'review') throw new Error('Анализ требований не предназначен для замены текста.');
+      if (job.action === 'tasks') throw new Error('Задачи на разработку не предназначены для замены текста. Скопируйте результат вручную.');
       if (job.result == null) throw new Error('Результат еще не получен.');
       const mode = message.mode === undefined ? 'replace' : message.mode;
       if (!['replace', 'after'].includes(mode) || (job.action === 'table' && mode !== 'replace')) throw new Error('Неизвестный способ вставки результата.');
@@ -157,16 +171,44 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
       await chrome.storage.session.remove(key);
       return { ok: true };
     }
+    if (message.type === 'md-ai-insert') {
+      if (job.action !== 'tasks' && job.action !== 'review') throw new Error('Вставка главы доступна только для задач на разработку и проверки качества документации.');
+      if (job.insertable !== true) throw new Error('Страница недоступна для редактирования. Откройте документ Confluence в режиме редактирования и повторите команду.');
+      let chapter;
+      if (job.action === 'tasks') {
+        if (job.stage !== 'generate' || !job.result || job.result.format !== 'tasks') throw new Error('Сначала нажмите «Создать задачи».');
+        chapter = MDExporterAI.tasksRichDocument(job.result, job.pageUrl);
+      } else {
+        if (!job.result || job.result.format !== 'review') throw new Error('Сначала нажмите «Проверить документ».');
+        chapter = MDExporterAI.reviewRichDocument(job.result, job.pageUrl);
+      }
+      await inEditor(job.tabId, job.frameId, 'insertChapter', [message.id, chapter]);
+      return { ok: true };
+    }
     const settings = (await chrome.storage.local.get(MDExporterAI.KEY))[MDExporterAI.KEY];
     if (!settings) throw new Error('Откройте расширение → Настройки AI и сохраните ключ, адрес API и модель.');
     const cfg = MDExporterAI.config(settings);
     const origin = MDExporterAI.originPattern(cfg.baseUrl);
     if (!(await chrome.permissions.contains({ origins: [origin] }))) throw new Error('Нет доступа к AI-провайдеру. Сохраните настройки AI повторно.');
-    const result = await MDExporterAI.transform(settings, job.action, job.source, message.prompt || '');
+    let result, patch = {};
+    if (job.action === 'tasks') {
+      const stage = message.stage === 'generate' || job.stage === 'generate' ? 'generate' : 'propose';
+      const userText = typeof message.prompt === 'string' ? message.prompt : '';
+      if (stage === 'propose' && Array.isArray(job.conversation) && job.conversation.length && !userText.trim()) {
+        throw new Error('Напишите, что изменить в декомпозиции, или нажмите «Создать задачи».');
+      }
+      if (userText.length > 4000) throw new Error('Комментарий не должен превышать 4000 символов.');
+      const messages = MDExporterAI.tasksMessages(stage, job.source, job.conversation, userText, job.pageUrl);
+      const raw = await MDExporterAI.chat(settings, messages);
+      result = MDExporterAI.tasksResult(raw, stage);
+      patch = { conversation: messages.slice(1).concat({ role: 'assistant', content: raw }), stage };
+    } else {
+      result = await MDExporterAI.transform(settings, job.action, job.source, message.prompt || '');
+    }
     // A cancelled dialog must not resurrect its job.
     if (!(await chrome.storage.session.get(key))[key]) throw new Error('Запрос отменен.');
-    await chrome.storage.session.set({ [key]: { ...job, result } });
-    return { ok: true, result };
+    await chrome.storage.session.set({ [key]: { ...job, ...patch, result } });
+    return { ok: true, result, ...(job.action === 'tasks' ? { stage: patch.stage } : {}) };
   })().then(respond, error => respond({ ok: false, error: error.message }));
   return true;
 });
@@ -176,6 +218,6 @@ chrome.alarms.create('md-ai-cleanup', { periodInMinutes: 10 });
 chrome.alarms.onAlarm.addListener(async alarm => {
   if (alarm.name !== 'md-ai-cleanup') return;
   const entries = await chrome.storage.session.get(null);
-  const expired = Object.keys(entries).filter(key => key.startsWith('aiJob:') && Date.now() - entries[key].created > 600000);
+  const expired = Object.keys(entries).filter(key => key.startsWith('aiJob:') && Date.now() - entries[key].created > jobTtl(entries[key]));
   if (expired.length) await chrome.storage.session.remove(expired);
 });

@@ -20,7 +20,7 @@
     const root = host.attachShadow({ mode: 'closed' });
     const style = document.createElement('style');
     style.textContent = `
-      :host{all:initial;color-scheme:light}*{box-sizing:border-box}[hidden]{display:none!important}.dialog{pointer-events:auto;display:flex;width:min(1120px,calc(100vw - 36px));height:min(850px,calc(100vh - 36px));max-height:92vh;flex-direction:column;padding:0;border:1px solid #e2e5ed;border-radius:18px;overflow:hidden;background:#fff;box-shadow:0 28px 90px rgba(23,32,51,.26);color:#172033;font:13px/1.5 Inter,"Segoe UI",Roboto,Arial,sans-serif;animation:dialog-in .2s ease both}.dialog::backdrop{background:rgba(23,32,51,.48);backdrop-filter:blur(4px)}button,textarea,select,input{font:inherit}.dialog-header{display:flex;min-height:70px;flex:none;align-items:center;gap:12px;padding:14px 20px;border-bottom:1px solid #e8e6f6;background:linear-gradient(120deg,#f4f2ff,#fff)}.brand-mark{display:grid;width:40px;height:40px;flex:none;place-items:center;border-radius:12px;background:linear-gradient(135deg,#7c72ff,#5147e5);box-shadow:0 5px 12px rgba(81,71,229,.2);color:#fff;font-size:12px;font-weight:800}.heading{min-width:0;flex:1}.kicker{color:#635bff;font-size:9px;font-weight:800;letter-spacing:1px}.dialog h2{margin:1px 0 0;font-size:18px;letter-spacing:-.3px}.dialog button{min-height:36px;padding:8px 13px;border:1px solid #dce0e8;border-radius:9px;background:#fff;color:#344054;cursor:pointer;font-size:11px;font-weight:650;transition:background .15s,border-color .15s,transform .15s,box-shadow .15s}.dialog button:hover:not(:disabled){border-color:#c9c5f6;background:#faf9ff}.dialog button:active:not(:disabled){transform:scale(.98)}.dialog button:focus-visible,.dialog textarea:focus-visible,.dialog select:focus-visible,.dialog summary:focus-visible{outline:3px solid rgba(99,91,255,.2);outline-offset:2px}.dialog button:disabled{opacity:.5;cursor:not-allowed}.dialog .close-button{display:grid;width:34px;min-height:34px;padding:0;place-items:center;border:0;background:transparent;color:#758197;font-size:22px;font-weight:400}.dialog .close-button:hover{background:#eeeef5;color:#172033}.dialog-body{display:flex;min-height:0;flex:1;flex-direction:column;overflow:auto}.prompt-block{flex:none;padding:14px 20px;border-bottom:1px solid #eceef3;background:#fafbfc}.prompt-block:empty{display:none}.prompt-row{display:flex;align-items:flex-end;gap:10px}.prompt-field{min-width:0;flex:1}.dialog label{display:block;margin:0 0 6px;color:#344054;font-size:11px;font-weight:700}.dialog textarea,.dialog select,.dialog input[type=text]{display:block;width:100%;box-sizing:border-box;border:1px solid #d8dde7;border-radius:9px;background:#fff;color:#172033;font:12px/1.45 Inter,"Segoe UI",sans-serif}.dialog textarea{min-height:66px;max-height:180px;padding:9px 11px;resize:vertical}.dialog select{min-height:38px;padding:8px 10px}.dialog input[type=text]{min-height:40px;padding:9px 11px}.dialog textarea:focus,.dialog select:focus,.dialog input[type=text]:focus{border-color:#635bff;outline:3px solid rgba(99,91,255,.1)}.scenario-select{min-width:190px}.scenario-actions{display:flex;align-items:center;gap:8px;margin-top:8px}.scenario-actions button{min-height:30px;padding:5px 9px}.scenario-status{margin:0!important;color:#16836f!important;font-size:10px}.comparison{display:grid;min-height:300px;flex:1;grid-template-columns:minmax(0,1fr) 48px minmax(0,1fr);padding:16px 20px;background:#f6f7fb}.pane{display:flex;min-width:0;min-height:0;flex-direction:column;overflow:hidden;border:1px solid #e1e4eb;border-radius:13px;background:#fff}.pane-header{display:flex;min-height:43px;flex:none;align-items:center;justify-content:space-between;gap:8px;padding:10px 13px;border-bottom:1px solid #eceef3;background:#fff;color:#475467;font-size:10px;font-weight:750;letter-spacing:.5px;text-transform:uppercase}.pane-content{min-height:0;flex:1;overflow:auto;padding:14px;color:#344054}.pane-content:empty{display:none}.result-pane{position:relative}.result-pane.is-loading .pane-content{opacity:.35}.comparison-loader{display:flex;align-items:center;justify-content:center;flex-direction:column;gap:8px;color:#635bff;text-align:center;visibility:hidden}.comparison-loader.is-visible{visibility:visible}.loader-spinner{width:26px;height:26px;border:3px solid #e1defe;border-top-color:#635bff;border-radius:50%;animation:spin .75s linear infinite}.comparison-loader span{font-size:9px;font-weight:650;line-height:1.35}.placeholder{display:flex;min-height:220px;height:100%;align-items:center;justify-content:center;flex-direction:column;gap:10px;color:#98a2b3;text-align:center}.placeholder-icon{display:grid;width:42px;height:42px;place-items:center;border-radius:13px;background:#f0effa;color:#7c72ff;font-size:19px}.placeholder p{max-width:190px;margin:0;font-size:11px;line-height:1.45}.dialog pre{max-height:none;margin:0;white-space:pre-wrap;overflow-wrap:anywhere;color:#344054;font:12px/1.6 "Cascadia Code",Consolas,monospace}.rich-preview{white-space:normal;overflow-wrap:anywhere}.rich-preview p{margin:0 0 12px}.rich-preview h1,.rich-preview h2,.rich-preview h3,.rich-preview h4,.rich-preview h5,.rich-preview h6{margin:14px 0 8px;line-height:1.3}.rich-preview h1{font-size:24px}.rich-preview h2{font-size:20px}.rich-preview h3{font-size:17px}.rich-preview blockquote{margin:10px 0;padding-left:12px;border-left:3px solid #d8d5fb}.rich-preview code{font-family:Consolas,monospace;white-space:pre-wrap}.rich-preview ul,.rich-preview ol{padding-left:26px}.rich-preview table,.table-preview{width:100%;border-collapse:collapse;table-layout:fixed}.rich-preview td,.rich-preview th,.table-preview td,.table-preview th{padding:8px;border:1px solid #dfe3ea;text-align:left;white-space:pre-wrap;overflow-wrap:anywhere}.rich-preview th,.table-preview th{background:#f2f1ff;color:#5147e5;font-size:10px}.rich-preview del{padding:1px 0;border-radius:3px;background:#ffe3e6;color:#a5263d;text-decoration:line-through}.rich-preview ins{padding:1px 0;border-radius:3px;background:#dcf5e9;color:#116b54;text-decoration:none}.rich-preview del span,.rich-preview del strong,.rich-preview ins span,.rich-preview ins strong{color:inherit}.diff-text{white-space:pre-wrap;overflow-wrap:anywhere;font:12px/1.65 "Cascadia Code",Consolas,monospace}.diff-text del{padding:1px 0;border-radius:3px;background:#ffe3e6;color:#a5263d;text-decoration:line-through;text-decoration-thickness:1px}.diff-text ins{padding:1px 0;border-radius:3px;background:#dcf5e9;color:#116b54;text-decoration:none}.diff-legend{color:#98a2b3;font-size:8px;font-weight:600;letter-spacing:0;text-transform:none}.json-controls{display:flex;gap:4px}.json-controls button{min-height:25px;padding:3px 6px;border-radius:6px;font-size:8px}.json-tree{font:11px/1.55 "Cascadia Code",Consolas,monospace}.json-node{margin-left:10px;padding-left:8px;border-left:1px solid #e5e7ed}.json-node>summary{cursor:pointer;list-style:none}.json-node>summary::-webkit-details-marker{display:none}.json-node>summary::before{display:inline-block;width:12px;color:#98a2b3;content:'▸'}.json-node[open]>summary::before{content:'▾'}.json-key{color:#635bff}.json-type{margin-left:6px;color:#98a2b3;font-size:9px}.json-primitive{display:flex;gap:7px;padding-left:21px;overflow-wrap:anywhere}.json-string{color:#16836f}.json-number{color:#b54708}.json-boolean,.json-null{color:#6941c6}.diagram-preview{display:grid;min-height:240px;place-items:center;overflow:auto;border:1px solid #e5e7ed;border-radius:10px;background:#fff}.diagram-preview svg{display:block;max-width:100%;max-height:430px;width:auto;height:auto}.diagram-error{padding:12px;color:#9c3046;font-size:11px}.diagram-code{margin-top:10px;padding:9px 11px;border:1px solid #e5e7ed;border-radius:9px;background:#fafbfc}.diagram-code summary{color:#5147e5;cursor:pointer;font-size:10px;font-weight:650}.diagram-code pre{margin-top:10px}.review-result{color:#344054}.score-top{display:flex;align-items:flex-end;justify-content:space-between;gap:10px}.score-number{font-size:42px;font-weight:780;letter-spacing:-2px;line-height:1}.score-label{color:#758197;font-size:10px}.score-track{height:9px;margin:13px 0 10px;overflow:hidden;border-radius:10px;background:#e9ecf1}.score-fill{height:100%;border-radius:inherit;transition:width .5s ease}.review-stage{margin:0 0 7px;font-size:15px;font-weight:720}.review-summary{margin:0 0 16px;color:#667085;font-size:11px}.review-low .score-number{color:#d92d20}.review-low .score-fill{background:#f04438}.review-mid .score-number{color:#dc6803}.review-mid .score-fill{background:#f79009}.review-good .score-number{color:#16836f}.review-good .score-fill{background:#12b76a}.recommendations-title{margin:0 0 8px;font-size:11px}.recommendations{display:flex;flex-direction:column;gap:7px;margin:0;padding:0;list-style:none}.recommendation{display:flex;align-items:flex-start;gap:9px;padding:9px;border:1px solid #e5e7ed;border-radius:9px;background:#fafbfc}.recommendation-index{display:grid;width:20px;height:20px;flex:none;place-items:center;border-radius:6px;background:#efefff;color:#635bff;font-size:9px;font-weight:750}.recommendation-body{min-width:0;flex:1;display:flex;flex-direction:column;gap:5px}.recommendation-meta{display:flex;align-items:center;gap:6px}.recommendation-category{padding:2px 6px;border-radius:5px;background:#efefff;color:#5147e5;font-size:9px;font-weight:700}.severity-badge{padding:2px 6px;border-radius:5px;font-size:9px;font-weight:750}.severity-blocker{background:#ffe3e6;color:#b4233d}.severity-major{background:#fff0db;color:#b54708}.severity-minor{background:#eef1f5;color:#667085}.recommendation-problem{margin:0;font-size:11px;font-weight:650;color:#1d2b45}.recommendation-evidence{margin:0;padding:4px 9px;border-left:3px solid #d8d5fb;border-radius:0 6px 6px 0;background:#f6f5ff;color:#5b5f97;font-size:10px;font-style:italic}.recommendation-fix{margin:0;color:#344054;font-size:10.5px}.recommendation-fix b{color:#16836f}.impact{flex:none;padding:2px 5px;border-radius:5px;background:#e8f6ef;color:#16836f;font-size:9px;font-weight:700;white-space:nowrap}.dialog-status{flex:none;margin:0;padding:0 20px;color:#667085;font-size:10px}.dialog-status:not(:empty){padding-top:9px}.dialog-status.error{color:#b4233d}.bottom-area{flex:none;padding:12px 20px;border-top:1px solid #e8eaf0;background:#fff}.apply-mode{display:flex;gap:16px;margin:0 0 10px;padding:0;border:0}.apply-mode label{display:flex;align-items:center;gap:6px;margin:0;color:#526075;font-size:10px;font-weight:500}.apply-mode input{margin:0;accent-color:#635bff}.dialog-actions{display:flex;align-items:center;justify-content:flex-end;gap:8px}.dialog-actions .primary{border:0;background:linear-gradient(120deg,#5147e5,#635bff);box-shadow:0 4px 10px rgba(81,71,229,.18);color:#fff}.dialog-actions .apply{border:0;background:#16836f;color:#fff}.dialog-actions .spacer{flex:1}.scenario-save-overlay{position:fixed;inset:0;z-index:5;display:grid;place-items:center;padding:20px;background:rgba(23,32,51,.48);pointer-events:auto}.scenario-save-overlay[hidden]{display:none!important}.scenario-save-card{width:min(520px,100%);padding:20px;border-radius:14px;background:#fff;box-shadow:0 20px 60px rgba(23,32,51,.25)}.scenario-save-card h3{margin:0 0 14px;font-size:17px}.scenario-save-card label{margin-top:12px}.scenario-save-card textarea{min-height:120px}.scenario-save-error{color:#b4233d!important;font-size:10px}.scenario-save-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:12px}.dialog{position:relative}.dialog.is-locked .dialog-body,.dialog.is-locked .bottom-area{filter:blur(5px);pointer-events:none;user-select:none}.lock-overlay{position:absolute;inset:0;z-index:6;display:flex;align-items:center;justify-content:center;padding:20px;background:rgba(250,250,255,.35)}.lock-overlay[hidden]{display:none!important}.lock-card{display:flex;max-width:330px;flex-direction:column;align-items:center;gap:9px;padding:20px 22px;border:1px solid #e6e4f8;border-radius:15px;background:#fff;box-shadow:0 18px 50px rgba(23,32,51,.18);text-align:center}.lock-card-icon{display:grid;width:38px;height:38px;place-items:center;border-radius:11px;background:#efefff;color:#635bff}.lock-card-icon svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}.lock-card b{color:#172033;font-size:13.5px}.lock-card p{margin:0;color:#667085;font-size:11px;line-height:1.5}.lock-card button.primary{border:0;background:linear-gradient(120deg,#5147e5,#635bff);box-shadow:0 4px 10px rgba(81,71,229,.18);color:#fff}@keyframes spin{to{transform:rotate(360deg)}}@keyframes dialog-in{from{opacity:0;transform:translateY(8px) scale(.985)}to{opacity:1;transform:translateY(0) scale(1)}}@media(max-width:760px){.dialog{width:calc(100vw - 20px);height:calc(100vh - 20px)}.comparison{grid-template-columns:minmax(0,1fr) 36px minmax(0,1fr);padding:12px}.prompt-row{align-items:stretch;flex-direction:column}}@media(prefers-reduced-motion:reduce){.dialog{animation:none}.loader-spinner{animation-duration:1.5s}.score-fill{transition:none}}
+      :host{all:initial;color-scheme:light}*{box-sizing:border-box}[hidden]{display:none!important}.dialog{pointer-events:auto;display:flex;width:min(1120px,calc(100vw - 36px));height:min(850px,calc(100vh - 36px));max-height:92vh;flex-direction:column;padding:0;border:1px solid #e2e5ed;border-radius:18px;overflow:hidden;background:#fff;box-shadow:0 28px 90px rgba(23,32,51,.26);color:#172033;font:13px/1.5 Inter,"Segoe UI",Roboto,Arial,sans-serif;animation:dialog-in .2s ease both}.dialog::backdrop{background:rgba(23,32,51,.48);backdrop-filter:blur(4px)}button,textarea,select,input{font:inherit}.dialog-header{display:flex;min-height:70px;flex:none;align-items:center;gap:12px;padding:14px 20px;border-bottom:1px solid #e8e6f6;background:linear-gradient(120deg,#f4f2ff,#fff)}.brand-mark{display:grid;width:40px;height:40px;flex:none;place-items:center;border-radius:12px;background:linear-gradient(135deg,#7c72ff,#5147e5);box-shadow:0 5px 12px rgba(81,71,229,.2);color:#fff;font-size:12px;font-weight:800}.heading{min-width:0;flex:1}.kicker{color:#635bff;font-size:9px;font-weight:800;letter-spacing:1px}.dialog h2{margin:1px 0 0;font-size:18px;letter-spacing:-.3px}.dialog button{min-height:36px;padding:8px 13px;border:1px solid #dce0e8;border-radius:9px;background:#fff;color:#344054;cursor:pointer;font-size:11px;font-weight:650;transition:background .15s,border-color .15s,transform .15s,box-shadow .15s}.dialog button:hover:not(:disabled){border-color:#c9c5f6;background:#faf9ff}.dialog button:active:not(:disabled){transform:scale(.98)}.dialog button:focus-visible,.dialog textarea:focus-visible,.dialog select:focus-visible,.dialog summary:focus-visible{outline:3px solid rgba(99,91,255,.2);outline-offset:2px}.dialog button:disabled{opacity:.5;cursor:not-allowed}.dialog .close-button{display:grid;width:34px;min-height:34px;padding:0;place-items:center;border:0;background:transparent;color:#758197;font-size:22px;font-weight:400}.dialog .close-button:hover{background:#eeeef5;color:#172033}.dialog-body{display:flex;min-height:0;flex:1;flex-direction:column;overflow:auto}.prompt-block{flex:none;padding:14px 20px;border-bottom:1px solid #eceef3;background:#fafbfc}.prompt-block:empty{display:none}.prompt-row{display:flex;align-items:flex-end;gap:10px}.prompt-field{min-width:0;flex:1}.dialog label{display:block;margin:0 0 6px;color:#344054;font-size:11px;font-weight:700}.dialog textarea,.dialog select,.dialog input[type=text]{display:block;width:100%;box-sizing:border-box;border:1px solid #d8dde7;border-radius:9px;background:#fff;color:#172033;font:12px/1.45 Inter,"Segoe UI",sans-serif}.dialog textarea{min-height:66px;max-height:180px;padding:9px 11px;resize:vertical}.dialog select{min-height:38px;padding:8px 10px}.dialog input[type=text]{min-height:40px;padding:9px 11px}.dialog textarea:focus,.dialog select:focus,.dialog input[type=text]:focus{border-color:#635bff;outline:3px solid rgba(99,91,255,.1)}.scenario-select{min-width:190px}.scenario-actions{display:flex;align-items:center;gap:8px;margin-top:8px}.scenario-actions button{min-height:30px;padding:5px 9px}.scenario-status{margin:0!important;color:#16836f!important;font-size:10px}.comparison{display:grid;min-height:300px;flex:1;grid-template-columns:minmax(0,1fr) 48px minmax(0,1fr);padding:16px 20px;background:#f6f7fb}.pane{display:flex;min-width:0;min-height:0;flex-direction:column;overflow:hidden;border:1px solid #e1e4eb;border-radius:13px;background:#fff}.pane-header{display:flex;min-height:43px;flex:none;align-items:center;justify-content:space-between;gap:8px;padding:10px 13px;border-bottom:1px solid #eceef3;background:#fff;color:#475467;font-size:10px;font-weight:750;letter-spacing:.5px;text-transform:uppercase}.source-url{max-width:60%;overflow:hidden;color:#98a2b3;font-size:9px;font-weight:600;letter-spacing:0;text-transform:none;text-overflow:ellipsis;white-space:nowrap}.pane-content{min-height:0;flex:1;overflow:auto;padding:14px;color:#344054}.pane-content:empty{display:none}.result-pane{position:relative}.result-pane.is-loading .pane-content{opacity:.35}.comparison-loader{display:flex;align-items:center;justify-content:center;flex-direction:column;gap:8px;color:#635bff;text-align:center;visibility:hidden}.comparison-loader.is-visible{visibility:visible}.loader-spinner{width:26px;height:26px;border:3px solid #e1defe;border-top-color:#635bff;border-radius:50%;animation:spin .75s linear infinite}.comparison-loader span{font-size:9px;font-weight:650;line-height:1.35}.placeholder{display:flex;min-height:220px;height:100%;align-items:center;justify-content:center;flex-direction:column;gap:10px;color:#98a2b3;text-align:center}.placeholder-icon{display:grid;width:42px;height:42px;place-items:center;border-radius:13px;background:#f0effa;color:#7c72ff;font-size:19px}.placeholder p{max-width:190px;margin:0;font-size:11px;line-height:1.45}.dialog pre{max-height:none;margin:0;white-space:pre-wrap;overflow-wrap:anywhere;color:#344054;font:12px/1.6 "Cascadia Code",Consolas,monospace}.rich-preview{white-space:normal;overflow-wrap:anywhere}.rich-preview p{margin:0 0 12px}.rich-preview h1,.rich-preview h2,.rich-preview h3,.rich-preview h4,.rich-preview h5,.rich-preview h6{margin:14px 0 8px;line-height:1.3}.rich-preview h1{font-size:24px}.rich-preview h2{font-size:20px}.rich-preview h3{font-size:17px}.rich-preview blockquote{margin:10px 0;padding-left:12px;border-left:3px solid #d8d5fb}.rich-preview code{font-family:Consolas,monospace;white-space:pre-wrap}.rich-preview ul,.rich-preview ol{padding-left:26px}.rich-preview table,.table-preview{width:100%;border-collapse:collapse;table-layout:fixed}.rich-preview td,.rich-preview th,.table-preview td,.table-preview th{padding:8px;border:1px solid #dfe3ea;text-align:left;white-space:pre-wrap;overflow-wrap:anywhere}.rich-preview th,.table-preview th{background:#f2f1ff;color:#5147e5;font-size:10px}.rich-preview del{padding:1px 0;border-radius:3px;background:#ffe3e6;color:#a5263d;text-decoration:line-through}.rich-preview ins{padding:1px 0;border-radius:3px;background:#dcf5e9;color:#116b54;text-decoration:none}.rich-preview del span,.rich-preview del strong,.rich-preview ins span,.rich-preview ins strong{color:inherit}.diff-text{white-space:pre-wrap;overflow-wrap:anywhere;font:12px/1.65 "Cascadia Code",Consolas,monospace}.diff-text del{padding:1px 0;border-radius:3px;background:#ffe3e6;color:#a5263d;text-decoration:line-through;text-decoration-thickness:1px}.diff-text ins{padding:1px 0;border-radius:3px;background:#dcf5e9;color:#116b54;text-decoration:none}.diff-legend{color:#98a2b3;font-size:8px;font-weight:600;letter-spacing:0;text-transform:none}.json-controls{display:flex;gap:4px}.json-controls button{min-height:25px;padding:3px 6px;border-radius:6px;font-size:8px}.json-tree{font:11px/1.55 "Cascadia Code",Consolas,monospace}.json-node{margin-left:10px;padding-left:8px;border-left:1px solid #e5e7ed}.json-node>summary{cursor:pointer;list-style:none}.json-node>summary::-webkit-details-marker{display:none}.json-node>summary::before{display:inline-block;width:12px;color:#98a2b3;content:'▸'}.json-node[open]>summary::before{content:'▾'}.json-key{color:#635bff}.json-type{margin-left:6px;color:#98a2b3;font-size:9px}.json-primitive{display:flex;gap:7px;padding-left:21px;overflow-wrap:anywhere}.json-string{color:#16836f}.json-number{color:#b54708}.json-boolean,.json-null{color:#6941c6}.diagram-preview{display:grid;min-height:240px;place-items:center;overflow:auto;border:1px solid #e5e7ed;border-radius:10px;background:#fff}.diagram-preview svg{display:block;max-width:100%;max-height:430px;width:auto;height:auto}.diagram-error{padding:12px;color:#9c3046;font-size:11px}.diagram-code{margin-top:10px;padding:9px 11px;border:1px solid #e5e7ed;border-radius:9px;background:#fafbfc}.diagram-code summary{color:#5147e5;cursor:pointer;font-size:10px;font-weight:650}.diagram-code pre{margin-top:10px}.review-result{color:#344054}.score-top{display:flex;align-items:flex-end;justify-content:space-between;gap:10px}.score-number{font-size:42px;font-weight:780;letter-spacing:-2px;line-height:1}.score-label{color:#758197;font-size:10px}.score-track{height:9px;margin:13px 0 10px;overflow:hidden;border-radius:10px;background:#e9ecf1}.score-fill{height:100%;border-radius:inherit;transition:width .5s ease}.review-stage{margin:0 0 7px;font-size:15px;font-weight:720}.review-summary{margin:0 0 16px;color:#667085;font-size:11px}.review-low .score-number{color:#d92d20}.review-low .score-fill{background:#f04438}.review-mid .score-number{color:#dc6803}.review-mid .score-fill{background:#f79009}.review-good .score-number{color:#16836f}.review-good .score-fill{background:#12b76a}.recommendations-title{margin:0 0 8px;font-size:11px}.recommendations{display:flex;flex-direction:column;gap:7px;margin:0;padding:0;list-style:none}.recommendation{display:flex;align-items:flex-start;gap:9px;padding:9px;border:1px solid #e5e7ed;border-radius:9px;background:#fafbfc}.recommendation-body{min-width:0;flex:1;display:flex;flex-direction:column;gap:5px}.recommendation-meta{display:flex;align-items:center;gap:6px}.recommendation-kicker{margin:0;color:#172033;font-size:12.5px;font-weight:700;letter-spacing:.2px}.severity-dot{width:8px;height:8px;flex:none;border-radius:50%}.severity-dot-blocker{background:#f04438}.severity-dot-major{background:#f79009}.severity-dot-minor{background:#98a2b3}.recommendation-problem{margin:0;font-size:11px;font-weight:400;color:#1d2b45}.recommendation-evidence{margin:0;padding:4px 9px;border-left:3px solid #d8d5fb;border-radius:0 6px 6px 0;background:#f6f5ff;color:#5b5f97;font-size:10px;font-style:italic}.recommendation-fix{margin:0;color:#344054;font-size:10.5px}.recommendation-fix b{color:#16836f}.tasks-hint{margin:0 0 12px;padding:9px 12px;border-radius:9px;background:#f6f5ff;color:#5b5f97;font-size:11px;line-height:1.5}.task-cards{display:flex;flex-direction:column;gap:10px}.task-card{border:1px solid #e5e7ed;border-left:3px solid #635bff;border-radius:11px;background:#fff;padding:13px 14px;box-shadow:0 1px 3px rgba(23,32,51,.05)}.task-kicker{margin:0 0 9px;color:#635bff;font-size:13px;font-weight:800;letter-spacing:.7px;text-transform:uppercase}.task-field{margin:0 0 6px;color:#344054;font-size:12px;line-height:1.55}.task-field b{color:#172033}.task-desc{margin:2px 0 0;padding:8px 0 2px 14px;border-left:2px solid #eceef3;color:#475467;font-size:12px;line-height:1.6}.task-card .task-field.task-copy,.task-card .task-desc.task-copy{cursor:pointer}.task-card .task-field.task-copy b{border-bottom:1px dashed #b9b3f8;transition:color .15s,border-color .15s}.task-card .task-field.task-copy:hover b,.task-card .task-field.task-copy:focus-visible b{color:#5147e5;border-bottom-color:#635bff}.task-card .task-copy:focus-visible{outline:3px solid rgba(99,91,255,.2);outline-offset:2px;border-radius:4px}.task-desc p{margin:0 0 6px}.task-steps{margin:2px 0 4px;padding-left:16px}.task-steps li{margin:2px 0}.tasks-result h1{margin:0 0 12px}.impact{flex:none;padding:2px 5px;border-radius:5px;background:#e8f6ef;color:#16836f;font-size:9px;font-weight:700;white-space:nowrap}.dialog-status{flex:none;margin:0;padding:0 20px;color:#667085;font-size:10px}.dialog-status:not(:empty){padding-top:9px}.dialog-status.error{color:#b4233d}.bottom-area{flex:none;padding:12px 20px;border-top:1px solid #e8eaf0;background:#fff}.apply-mode{display:flex;gap:16px;margin:0 0 10px;padding:0;border:0}.apply-mode label{display:flex;align-items:center;gap:6px;margin:0;color:#526075;font-size:10px;font-weight:500}.apply-mode input{margin:0;accent-color:#635bff}.dialog-actions{display:flex;align-items:center;justify-content:flex-end;gap:8px}.dialog-actions .primary{border:0;background:linear-gradient(120deg,#5147e5,#635bff);box-shadow:0 4px 10px rgba(81,71,229,.18);color:#fff}.dialog-actions .apply{border:0;background:#16836f;color:#fff}.dialog-actions .spacer{flex:1}.scenario-save-overlay{position:fixed;inset:0;z-index:5;display:grid;place-items:center;padding:20px;background:rgba(23,32,51,.48);pointer-events:auto}.scenario-save-overlay[hidden]{display:none!important}.scenario-save-card{width:min(520px,100%);padding:20px;border-radius:14px;background:#fff;box-shadow:0 20px 60px rgba(23,32,51,.25)}.scenario-save-card h3{margin:0 0 14px;font-size:17px}.scenario-save-card label{margin-top:12px}.scenario-save-card textarea{min-height:120px}.scenario-save-error{color:#b4233d!important;font-size:10px}.scenario-save-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:12px}.dialog{position:relative}.dialog.is-locked .dialog-body,.dialog.is-locked .bottom-area{filter:blur(5px);pointer-events:none;user-select:none}.lock-overlay{position:absolute;inset:0;z-index:6;display:flex;align-items:center;justify-content:center;padding:20px;background:rgba(250,250,255,.35)}.lock-overlay[hidden]{display:none!important}.lock-card{display:flex;max-width:330px;flex-direction:column;align-items:center;gap:9px;padding:20px 22px;border:1px solid #e6e4f8;border-radius:15px;background:#fff;box-shadow:0 18px 50px rgba(23,32,51,.18);text-align:center}.lock-card-icon{display:grid;width:38px;height:38px;place-items:center;border-radius:11px;background:#efefff;color:#635bff}.lock-card-icon svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}.lock-card b{color:#172033;font-size:13.5px}.lock-card p{margin:0;color:#667085;font-size:11px;line-height:1.5}.lock-card button.primary{border:0;background:linear-gradient(120deg,#5147e5,#635bff);box-shadow:0 4px 10px rgba(81,71,229,.18);color:#fff}@keyframes spin{to{transform:rotate(360deg)}}@keyframes dialog-in{from{opacity:0;transform:translateY(8px) scale(.985)}to{opacity:1;transform:translateY(0) scale(1)}}@media(max-width:760px){.dialog{width:calc(100vw - 20px);height:calc(100vh - 20px)}.comparison{grid-template-columns:minmax(0,1fr) 36px minmax(0,1fr);padding:12px}.prompt-row{align-items:stretch;flex-direction:column}}@media(prefers-reduced-motion:reduce){.dialog{animation:none}.loader-spinner{animation-duration:1.5s}.score-fill{transition:none}}
     `;
     root.appendChild(style);
     const dialog = document.createElement('dialog');
@@ -62,7 +62,8 @@
 
     const titles = {
       review: 'Проверка качества документации', spelling: 'Исправление текста', custom: 'AI-редактор',
-      format: 'Оформление текста', table: 'Редактирование таблицы', json: 'JSON и XML', diagram: 'Редактор схемы'
+      format: 'Оформление текста', table: 'Редактирование таблицы', json: 'JSON и XML', diagram: 'Редактор схемы',
+      tasks: 'Задачи на разработку'
     };
     const header = add('div', ''); header.className = 'dialog-header';
     const mark = add('span', 'AI', header); mark.className = 'brand-mark'; mark.setAttribute('aria-hidden', 'true');
@@ -73,7 +74,7 @@
 
     const body = add('div', ''); body.className = 'dialog-body';
     const promptBlock = add('div', '', body); promptBlock.className = 'prompt-block';
-    const prompted = ['custom', 'format', 'table', 'json', 'diagram'].includes(message.action);
+    const prompted = ['custom', 'format', 'table', 'json', 'diagram', 'tasks'].includes(message.action);
     let prompt, scenarioSelect, scenarioName, scenarioStatus, scenarioSave, scenarioSavePanel;
     let openSettingsButton = null;
     const scenarioMap = new Map();
@@ -87,9 +88,11 @@
       }
       const row = add('div', '', promptBlock); row.className = 'prompt-row';
       const field = add('div', '', row); field.className = 'prompt-field';
-      const label = add('label', message.action === 'json' || message.action === 'diagram' ? 'Что изменить? (необязательно)' : 'Инструкция для AI', field);
+      const label = add('label', message.action === 'tasks' ? 'Пользовательский промт'
+        : message.action === 'json' || message.action === 'diagram' ? 'Что изменить? (необязательно)' : 'Инструкция для AI', field);
       prompt = add('textarea', '', label); prompt.maxLength = 4000;
-      prompt.placeholder = message.action === 'table' ? 'Например: «да» — зелёный фон, «нет» — жёлтый'
+      prompt.placeholder = message.action === 'tasks' ? 'Например: разбей задачу про отчёт на две, убери роль QA, уточни описания'
+        : message.action === 'table' ? 'Например: «да» — зелёный фон, «нет» — жёлтый'
         : message.action === 'format' ? 'Например: ключевые слова жирным, первую строку заголовком'
           : message.action === 'json' ? 'Например: добавь необязательный блок и переименуй ключ'
             : message.action === 'diagram' ? 'Например: исправь стрелки и уточни подписи'
@@ -135,6 +138,7 @@
     const comparison = add('div', '', body); comparison.className = 'comparison';
     const originalPane = add('section', '', comparison); originalPane.className = 'pane original-pane';
     const originalHeader = add('div', '', originalPane); originalHeader.className = 'pane-header'; add('span', 'Исходный текст', originalHeader);
+    if (message.pageUrl) add('span', message.pageUrl, originalHeader).className = 'source-url';
     const originalContent = add('div', '', originalPane); originalContent.className = 'pane-content';
     const loader = add('div', '', comparison); loader.className = 'comparison-loader';
     add('div', '', loader).className = 'loader-spinner'; add('span', 'AI работает…', loader);
@@ -151,8 +155,8 @@
       originalContent.replaceChildren();
       const source = message.snapshot && message.snapshot.source;
       if (!source) {
-        add('p', message.action === 'review'
-          ? 'Текст не выделен. Закройте это окно, выделите нужный фрагмент или весь документ (Ctrl+A, на Mac — ⌘+A) и запустите проверку повторно.'
+        add('p', message.action === 'review' || message.action === 'tasks'
+          ? 'Текст не выделен. Закройте это окно, выделите нужный фрагмент или весь документ (Ctrl+A, на Mac — ⌘+A) и запустите команду повторно.'
           : 'Выделенный текст недоступен.', originalContent);
         return;
       }
@@ -283,9 +287,11 @@
         }
       }
     }
+    const severityLabels = { blocker: 'blocker · блокирует', major: 'major · важно', minor: 'minor · желательно' };
     function renderReview(result) {
       const score = Math.max(0, Math.min(100, result.score));
       const box = add('div', '', resultContent); box.className = 'review-result ' + (score < 30 ? 'review-low' : score < 80 ? 'review-mid' : 'review-good');
+      add('p', 'Чтобы замечания не потерялись, пока вы правите текст: нажмите «Скопировать отчёт» и вставьте его в комментарий или задачу, либо «Вставить в документацию» — отчёт добавится в конец страницы. После правок нажмите «Повторить анализ», чтобы проверить документ заново.', box).className = 'tasks-hint';
       const top = add('div', '', box); top.className = 'score-top';
       add('div', score + '%', top).className = 'score-number'; add('span', 'готовность к разработке', top).className = 'score-label';
       const track = add('div', '', box); track.className = 'score-track';
@@ -295,14 +301,15 @@
       if (result.summary) add('p', result.summary, box).className = 'review-summary';
       add('h4', 'Что улучшить', box).className = 'recommendations-title';
       const list = add('ul', '', box); list.className = 'recommendations';
-      const severityLabels = { blocker: 'blocker · блокирует', major: 'major · важно', minor: 'minor · желательно' };
       result.recommendations.forEach((item, index) => {
         const row = add('li', '', list); row.className = 'recommendation';
-        add('span', String(index + 1), row).className = 'recommendation-index';
         const body = add('div', '', row); body.className = 'recommendation-body';
         const meta = add('div', '', body); meta.className = 'recommendation-meta';
-        add('span', item.category, meta).className = 'recommendation-category';
-        add('span', severityLabels[item.severity] || item.severity, meta).className = 'severity-badge severity-' + item.severity;
+        add('p', (index + 1) + ' · ' + item.category.charAt(0).toUpperCase() + item.category.slice(1), meta).className = 'recommendation-kicker';
+        const dot = add('span', '', meta); dot.className = 'severity-dot severity-dot-' + item.severity;
+        dot.title = severityLabels[item.severity] || item.severity;
+        dot.setAttribute('role', 'img');
+        dot.setAttribute('aria-label', dot.title);
         add('p', item.problem, body).className = 'recommendation-problem';
         add('blockquote', item.evidence, body).className = 'recommendation-evidence';
         const fix = add('p', '', body); fix.className = 'recommendation-fix';
@@ -312,12 +319,165 @@
       });
     }
 
+    // Clipboard payload is a self-built DOM: every model-provided string goes
+    // in through textContent, so serializing it to HTML is safe.
+    function clipboardText(node) {
+      let text = '';
+      (function walk(current) {
+        for (const child of current.childNodes) {
+          if (child.nodeType === Node.TEXT_NODE) { text += child.nodeValue; continue; }
+          walk(child);
+          if (['BR', 'P', 'DIV', 'H1', 'H2', 'LI', 'TR'].includes(child.tagName)) text += '\n';
+          if (['UL', 'OL', 'TABLE'].includes(child.tagName)) text += '\n';
+          if (['TD', 'TH'].includes(child.tagName)) text += ' | ';
+        }
+      })(node);
+      return text.replace(/\n{3,}/g, '\n\n').trim();
+    }
+    function buildClipboard(build) {
+      const box = document.createElement('div');
+      build(box);
+      return { html: box.innerHTML, text: clipboardText(box) };
+    }
+    async function writeClipboard(payload) {
+      try {
+        if (navigator.clipboard && navigator.clipboard.write && typeof ClipboardItem !== 'undefined') {
+          await navigator.clipboard.write([new ClipboardItem({
+            'text/html': new Blob([payload.html], { type: 'text/html' }),
+            'text/plain': new Blob([payload.text], { type: 'text/plain' })
+          })]);
+          return;
+        }
+      } catch (_) { /* Rich clipboard is unavailable: fall back to plain text. */ }
+      try { await navigator.clipboard.writeText(payload.text); }
+      catch (_) {
+        const area = add('textarea', '', dialog); area.value = payload.text; area.style.cssText = 'position:fixed;left:-10000px;top:0';
+        area.focus(); area.select();
+        const copied = document.execCommand('copy'); area.remove();
+        if (!copied) throw new Error('Не удалось скопировать. Выделите текст вручную.');
+      }
+    }
+    async function copyWithStatus(payload, done) {
+      try {
+        await writeClipboard(payload);
+        status.className = 'dialog-status';
+        status.textContent = done;
+      } catch (error) { fail(error); }
+    }
+    function appendTaskChapter(box, task, withHeading) {
+      if (withHeading) add('h2', 'Задача ' + task.number + '. ' + task.title, box);
+      else {
+        const name = add('p', '', box);
+        add('strong', 'Название задачи: ', name);
+        name.append(task.title);
+      }
+      const description = add('p', '', box);
+      add('strong', 'Описание задачи: ', description);
+      description.append(task.goal);
+      if (task.steps.length) {
+        const list = add('ul', '', box);
+        for (const step of task.steps) add('li', step, list);
+      }
+      const link = add('p', '', box);
+      add('strong', 'Ссылка на документацию: ', link);
+      link.append(message.pageUrl || 'уточнить у аналитика');
+    }
+    function appendFullChapter(box, tasks) {
+      add('h1', 'Задачи на разработку', box);
+      for (const task of tasks) appendTaskChapter(box, task, true);
+    }
+    function appendReviewChapter(box, result) {
+      add('h1', 'Проверка качества документации', box);
+      const readiness = add('p', '', box);
+      add('strong', 'Готовность к разработке: ', readiness);
+      readiness.append(result.score + '%');
+      add('p', result.summary, box);
+      const list = add('ol', '', box);
+      result.recommendations.forEach((item, index) => {
+        const row = add('li', '', list);
+        const head = add('p', '', row);
+        add('strong', (index + 1) + '. [' + item.category + ' · ' + (severityLabels[item.severity] || item.severity) + '] ', head);
+        head.append(item.problem);
+        add('blockquote', item.evidence, row);
+        const fix = add('p', '', row);
+        add('strong', 'Как исправить: ', fix);
+        fix.append(item.fix);
+      });
+    }
+    function makeCopyable(node, build, doneText, hint) {
+      node.classList.add('task-copy');
+      node.tabIndex = 0;
+      node.title = hint;
+      node.setAttribute('role', 'button');
+      const activate = () => copyWithStatus(buildClipboard(build), doneText);
+      node.addEventListener('click', activate);
+      node.addEventListener('keydown', event => {
+        if (event.key !== 'Enter' && event.key !== ' ') return;
+        event.preventDefault();
+        activate();
+      });
+    }
+    function taskCardShell(cards, task, index) {
+      const card = add('div', '', cards); card.className = 'task-card';
+      add('p', (task.number != null ? task.number : index + 1) + ': ' + task.role, card).className = 'task-kicker';
+      const name = add('p', '', card); name.className = 'task-field';
+      add('b', 'Название задачи: ', name);
+      name.append(task.title);
+      makeCopyable(name, box => {
+        const clone = name.cloneNode(true);
+        const label = clone.querySelector('b');
+        if (label) label.remove();
+        box.appendChild(clone);
+      }, 'Название задачи скопировано.', 'Нажмите, чтобы скопировать название задачи');
+      const descriptionLabel = add('p', '', card); descriptionLabel.className = 'task-field';
+      add('b', 'Описание задачи:', descriptionLabel);
+      const description = add('div', '', card);
+      const copyDescription = box => box.appendChild(description.cloneNode(true));
+      makeCopyable(descriptionLabel, copyDescription, 'Описание задачи скопировано.', 'Нажмите, чтобы скопировать описание задачи');
+      makeCopyable(description, copyDescription, 'Описание задачи скопировано.', 'Нажмите, чтобы скопировать описание задачи');
+      return description;
+    }
+    function renderTasksProposal(result) {
+      const box = add('div', '', resultContent); box.className = 'tasks-result';
+      add('p', 'Если ответ AI вам не подходит, допишите правки в окне «Пользовательский промт» (например: количество задач, роли, декомпозицию, описания) и нажмите «Повторная обработка». Если всё устраивает — нажмите «Создать задачи».', box).className = 'tasks-hint';
+      const cards = add('div', '', box); cards.className = 'task-cards';
+      result.tasks.forEach((task, index) => {
+        const description = taskCardShell(cards, task, index);
+        description.className = 'task-desc task-copy';
+        add('p', task.description, description);
+      });
+    }
+    function renderTasksDocument(result) {
+      const box = add('div', '', resultContent); box.className = 'tasks-result rich-preview';
+      add('h1', 'Задачи на разработку', box);
+      const cards = add('div', '', box); cards.className = 'task-cards';
+      for (const task of result.tasks) {
+        const description = taskCardShell(cards, task);
+        description.className = 'task-desc task-copy';
+        add('p', task.goal, description);
+        if (task.steps.length) {
+          const steps = add('ul', '', description); steps.className = 'task-steps';
+          for (const step of task.steps) add('li', step, steps);
+        }
+        if (message.pageUrl) {
+          const link = add('p', '', description);
+          add('b', 'Ссылка на документацию: ', link);
+          link.append(message.pageUrl);
+        }
+      }
+    }
+
     let renderVersion = 0;
     let currentResult = null;
     async function renderResult(result) {
       const version = ++renderVersion;
       resultContent.replaceChildren();
       if (message.action === 'review') { renderReview(result); return; }
+      if (message.action === 'tasks') {
+        if (result && result.format === 'tasks' && result.stage === 'generate') renderTasksDocument(result);
+        else renderTasksProposal(result);
+        return;
+      }
       if (message.action === 'spelling') {
         const richSource = message.snapshot.source && message.snapshot.source.format === 'rich-text';
         if (richSource && result && result.format === 'rich-text') {
@@ -368,7 +528,11 @@
     const actions = add('div', '', bottom); actions.className = 'dialog-actions';
     const cancel = add('button', 'Закрыть', actions); cancel.type = 'button';
     const spacer = add('span', '', actions); spacer.className = 'spacer';
-    const run = add('button', message.action === 'review' ? 'Проверить документ' : 'Запустить AI', actions); run.type = 'button'; run.className = 'primary';
+    const run = add('button', message.action === 'review' ? 'Проверить документ' : message.action === 'tasks' ? 'Предложить декомпозицию' : 'Запустить AI', actions); run.type = 'button'; run.className = 'primary';
+    const createTasks = add('button', 'Создать задачи', actions); createTasks.type = 'button'; createTasks.className = 'primary'; createTasks.hidden = true;
+    const copyAll = add('button', 'Скопировать все задачи', actions); copyAll.type = 'button'; copyAll.hidden = true;
+    const copyReview = add('button', 'Скопировать отчёт', actions); copyReview.type = 'button'; copyReview.hidden = true;
+    const insertButton = add('button', 'Вставить в документацию', actions); insertButton.type = 'button'; insertButton.hidden = true;
     const readOnly = !!(message.snapshot && message.snapshot.readOnly);
     const apply = add('button', readOnly ? 'Копировать результат' : message.action === 'table' ? 'Применить изменения' : 'Заменить выделение', actions); apply.type = 'button'; apply.className = 'apply'; apply.hidden = true;
     if (message.action === 'review') run.classList.add('review-run');
@@ -435,7 +599,13 @@
     }
     function setBusy(value) {
       run.disabled = value || !!message.error;
-      run.textContent = value ? 'Выполняется…' : currentResult ? (message.action === 'review' ? 'Повторить анализ' : 'Повторить запрос') : message.action === 'review' ? 'Проверить документ' : 'Запустить AI';
+      run.textContent = value ? 'Выполняется…' : currentResult
+        ? message.action === 'review' ? 'Повторить анализ' : message.action === 'tasks' ? 'Повторная обработка' : 'Повторить запрос'
+        : message.action === 'review' ? 'Проверить документ' : message.action === 'tasks' ? 'Предложить декомпозицию' : 'Запустить AI';
+      createTasks.disabled = value;
+      copyAll.disabled = value;
+      copyReview.disabled = value;
+      insertButton.disabled = value;
       if (prompt) prompt.disabled = value;
       if (scenarioSelect) scenarioSelect.disabled = value;
       if (scenarioSave) scenarioSave.disabled = value;
@@ -443,6 +613,42 @@
       resultPane.classList.toggle('is-loading', value);
       if (currentResult) apply.disabled = value;
     }
+    function finishTasksStage(stage) {
+      if (stage === 'generate') {
+        promptBlock.hidden = true; createTasks.hidden = true; run.hidden = true;
+        copyAll.hidden = false;
+        insertButton.hidden = !message.insertable;
+        status.textContent = message.insertable
+          ? 'Скопируйте задачи по отдельности, скопируйте все разом или вставьте главу в документацию.'
+          : 'Скопируйте задачи по отдельности или все разом для переноса в Jira.';
+      } else {
+        createTasks.hidden = false;
+      }
+    }
+    copyAll.onclick = async () => {
+      if (closed || !currentResult || !Array.isArray(currentResult.tasks)) return;
+      copyAll.disabled = true;
+      try { await copyWithStatus(buildClipboard(box => appendFullChapter(box, currentResult.tasks)), 'Все задачи скопированы.'); }
+      finally { if (!closed) copyAll.disabled = false; }
+    };
+    copyReview.onclick = async () => {
+      if (closed || !currentResult || currentResult.format !== 'review') return;
+      copyReview.disabled = true;
+      try { await copyWithStatus(buildClipboard(box => appendReviewChapter(box, currentResult)), 'Отчёт скопирован.'); }
+      finally { if (!closed) copyReview.disabled = false; }
+    };
+    insertButton.onclick = async () => {
+      if (closed) return;
+      insertButton.disabled = true;
+      try {
+        await send('md-ai-insert');
+        status.className = 'dialog-status';
+        status.textContent = message.action === 'review'
+          ? 'Отчёт добавлен в конец документа.'
+          : 'Глава «Задачи на разработку» добавлена в конец документа.';
+      } catch (error) { if (!closed) fail(error); }
+      finally { if (!closed) insertButton.disabled = false; }
+    };
     run.disabled = !!message.error || !!message.locked;
     run.onclick = async () => {
       if (closed) return;
@@ -452,13 +658,32 @@
         if (closed) return;
         currentResult = response.result;
         await renderResult(response.result);
-        if (message.action !== 'review') {
+        if (message.action === 'tasks') finishTasksStage(response.stage === 'generate' ? 'generate' : 'propose');
+        else if (message.action === 'review') {
+          copyReview.hidden = false;
+          insertButton.hidden = !message.insertable;
+          status.textContent = message.insertable
+            ? 'Скопируйте отчёт или вставьте его в конец документа, чтобы замечания не потерялись, пока вы правите текст.'
+            : 'Скопируйте отчёт, чтобы замечания не потерялись, пока вы правите текст.';
+        } else {
           apply.hidden = false;
           applyMode.hidden = message.action === 'table' || readOnly;
         }
-        status.textContent = message.action === 'review' ? '' : readOnly
+        if (message.action !== 'review' && message.action !== 'tasks') status.textContent = readOnly
           ? 'Сложный блок не изменяется автоматически. Скопируйте результат и вставьте его вручную.'
           : 'Проверьте результат перед вставкой.';
+      } catch (error) { if (!closed) fail(error); }
+      finally { if (!closed) setBusy(false); }
+    };
+    createTasks.onclick = async () => {
+      if (closed) return;
+      setBusy(true); status.textContent = ''; status.className = 'dialog-status';
+      try {
+        const response = await send('md-ai-run', { stage: 'generate', prompt: '' });
+        if (closed) return;
+        currentResult = response.result;
+        await renderResult(response.result);
+        finishTasksStage('generate');
       } catch (error) { if (!closed) fail(error); }
       finally { if (!closed) setBusy(false); }
     };

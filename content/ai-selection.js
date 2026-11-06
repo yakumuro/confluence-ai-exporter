@@ -146,7 +146,10 @@
     snapshots.clear();
     snapshots.set(id, snapshot);
     setTimeout(() => snapshots.delete(id), 10 * 60 * 1000);
-    return { id, source: snapshot.source, readOnly: !!snapshot.readOnly };
+    return {
+      id, source: snapshot.source, readOnly: !!snapshot.readOnly,
+      editable: !snapshot.input && !!snapshot.scope && snapshot.scope.isContentEditable === true
+    };
   }
   function apply(id, result, mode = 'replace') {
     const saved = snapshots.get(id);
@@ -295,6 +298,44 @@
     snapshots.delete(id);
     return { ok: true };
   }
+  function insertChapter(id, chapter) {
+    const saved = snapshots.get(id);
+    if (!saved) throw new Error('Выделение устарело. Повторите команду.');
+    if (saved.input) throw new Error('Вставка главы доступна только в визуальном редакторе Confluence.');
+    if (!saved.scope.isConnected || fingerprint(saved.scope) !== saved.before || saved.scope.isContentEditable !== true) {
+      throw new Error('Документ изменился во время запроса. Выделите фрагмент заново.');
+    }
+    const richDocument = Rich.validate(chapter);
+    const richHTML = Rich.html(richDocument, false);
+    const mutate = () => {
+      if (saved.editor && saved.editor.focus) saved.editor.focus();
+      else saved.scope.focus();
+      // The chapter is appended at the very end of the document.
+      const endRange = document.createRange();
+      endRange.selectNodeContents(saved.scope);
+      endRange.collapse(false);
+      if (saved.editor) saved.editor.selection.setRng(endRange);
+      else {
+        const selection = window.getSelection();
+        selection.removeAllRanges();
+        selection.addRange(endRange);
+      }
+      if (saved.editor) saved.editor.insertContent(richHTML);
+      else if (!document.execCommand('insertHTML', false, '<p><br></p>' + richHTML)) throw new Error('Редактор не поддерживает вставку.');
+    };
+    if (saved.editor && saved.editor.undoManager) {
+      let failure;
+      saved.editor.undoManager.transact(() => { try { mutate(); } catch (error) { failure = error; } });
+      if (failure) {
+        if (fingerprint(saved.scope) !== saved.before && saved.editor.undoManager.undo) saved.editor.undoManager.undo();
+        throw failure;
+      }
+      saved.editor.nodeChanged(); saved.editor.setDirty(true);
+      if (saved.editor.fire) saved.editor.fire('change');
+    } else mutate();
+    saved.scope.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertParagraph' }));
+    return { ok: true };
+  }
   function discard(id) {
     const saved = snapshots.get(id);
     snapshots.delete(id);
@@ -311,5 +352,5 @@
       }
     } catch (_) { /* The editor was closed or re-rendered. */ }
   }
-  window.MDExporterAISelection = { capture, apply, discard };
+  window.MDExporterAISelection = { capture, apply, discard, insertChapter };
 })();

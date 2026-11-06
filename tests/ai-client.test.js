@@ -222,3 +222,136 @@ test('rich spelling changes only text and preserves original formatting', async 
 test('rich output rejects HTML, Markdown, unsafe links and unvalidated provider attributes', async () => {
   for (const content of ['<h1>Риск</h1>', '**Риск**', JSON.stringify(richDoc('Риск', { href: 'javascript:alert(1)' })), JSON.stringify(richDoc('Риск', { style: 'color:red' }))]) await assert.rejects(ai.transform(settings, 'custom', richSource, 'оформи', reply(content)));
 });
+test('tasks action is registered for panel-side validation', () => {
+  assert.equal(typeof ai.ACTIONS.tasks, 'string');
+  assert.match(ai.ACTIONS.tasks, /декомпозицию/);
+  assert.match(ai.ACTIONS.tasks, /"total"/);
+});
+test('tasks propose messages wrap the selection as data with the propose system prompt', () => {
+  const messages = ai.tasksMessages('propose', 'Текст документа', [], '', 'https://conf.example/x');
+  assert.equal(messages.length, 2);
+  assert.equal(messages[0].role, 'system');
+  assert.match(messages[0].content, /декомпозицию/);
+  assert.match(messages[0].content, /"roles"/);
+  assert.doesNotMatch(messages[0].content, /https:\/\/conf\.example/);
+  assert.deepEqual(JSON.parse(messages[1].content), { instruction: 'Предложи декомпозицию выделенного текста на задачи разработки.', selection: 'Текст документа' });
+});
+test('tasks iteration messages keep the full history and append the user comment', () => {
+  const history = [
+    { role: 'user', content: JSON.stringify({ instruction: 'Предложи декомпозицию выделенного текста на задачи разработки.', selection: 'doc' }) },
+    { role: 'assistant', content: 'Декомпозиция v1' }
+  ];
+  const messages = ai.tasksMessages('propose', 'doc', history, 'Убери роль QA', 'https://conf.example/x');
+  assert.deepEqual(messages.slice(1), [...history, { role: 'user', content: 'Убери роль QA' }]);
+});
+test('tasks generate messages switch the system prompt and embed the page URL', () => {
+  const history = [{ role: 'user', content: 'u' }, { role: 'assistant', content: 'a' }];
+  const messages = ai.tasksMessages('generate', 'doc', history, '', 'https://conf.example/pages/42');
+  assert.equal(messages[0].role, 'system');
+  assert.match(messages[0].content, /Ссылка на документацию, которую система подставит в каждую задачу: https:\/\/conf\.example\/pages\/42/);
+  assert.match(messages[0].content, /"steps"/);
+  assert.equal(messages[messages.length - 1].role, 'user');
+  assert.match(messages[messages.length - 1].content, /согласована/);
+  assert.deepEqual(messages.slice(1, -1), history);
+});
+const proposalReply = { total: 2, roles: [{ role: 'back-end', count: 2 }], tasks: [{ title: 'A', role: 'back-end', description: 'd' }, { title: 'B', role: 'back-end', description: 'e' }] };
+test('tasks proposal result validates JSON and normalizes fields', () => {
+  const result = ai.tasksResult('```json\n' + JSON.stringify(proposalReply) + '\n```', 'propose');
+  assert.deepEqual(result, { format: 'tasks', stage: 'propose', ...proposalReply });
+  for (const bad of [
+    'not json',
+    JSON.stringify({ total: 0, roles: [], tasks: proposalReply.tasks }),
+    JSON.stringify({ total: 2, roles: [{ role: 'x', count: 0 }], tasks: proposalReply.tasks }),
+    JSON.stringify({ total: 2, roles: [], tasks: [] }),
+    JSON.stringify({ total: 2, roles: [], tasks: [{ title: '', role: 'r', description: 'd' }] }),
+    JSON.stringify({ total: 2, roles: [], tasks: [{ title: 't', role: 'r' }] })
+  ]) assert.throws(() => ai.tasksResult(bad, 'propose'), /неверном формате/);
+});
+const docReply = { tasks: [{ number: 2, title: 'API', role: 'back-end', goal: 'Цель', steps: ['Шаг 1'] }, { number: 1, title: 'Форма', role: 'front-end', goal: 'Цель 1', steps: ['s'] }] };
+test('tasks document result validates JSON and sorts tasks by number', () => {
+  const result = ai.tasksResult(JSON.stringify(docReply), 'generate');
+  assert.equal(result.format, 'tasks');
+  assert.equal(result.stage, 'generate');
+  assert.deepEqual(result.tasks.map(task => task.number), [1, 2]);
+  for (const bad of [
+    '{}',
+    JSON.stringify({ tasks: [{ number: 1, title: 't', role: 'r', goal: 'g', steps: [] }] }),
+    JSON.stringify({ tasks: [{ number: 0, title: 't', role: 'r', goal: 'g', steps: ['s'] }] }),
+    JSON.stringify({ tasks: [{ number: 1, title: 't', role: 'r', goal: 'g' }] }),
+    JSON.stringify({ tasks: [{ number: 1, title: 't', role: 'r', goal: 'g', steps: [4] }] })
+  ]) assert.throws(() => ai.tasksResult(bad, 'generate'), /неверном формате/);
+});
+test('tasksRichDocument builds a validated chapter with steps and the page link', () => {
+  const rich = require('../lib/ai-rich-text');
+  const result = ai.tasksResult(JSON.stringify({ tasks: [docReply.tasks[0]] }), 'generate');
+  const chapter = ai.tasksRichDocument(result, 'https://conf.example/pages/42');
+  assert.equal(chapter.type, 'doc');
+  assert.deepEqual(chapter.content.map(node => node.type), ['heading', 'heading', 'paragraph', 'bulletList', 'paragraph']);
+  assert.equal(chapter.content[0].content[0].text, 'Задачи на разработку');
+  assert.equal(chapter.content[1].content[0].text, 'Задача 2. API');
+  const link = chapter.content[4].content[1];
+  assert.equal(link.href, 'https://conf.example/pages/42');
+  assert.match(rich.text(chapter), /Задачи на разработку/);
+  assert.match(rich.text(chapter), /conf\.example\/pages\/42/);
+  const insecure = ai.tasksRichDocument(result, 'http://insecure.example');
+  assert.equal(insecure.content[4].content.length, 2);
+  assert.equal(insecure.content[4].content[1].text, 'уточнить у аналитика');
+  assert.throws(() => ai.tasksRichDocument({ format: 'tasks', stage: 'propose', tasks: [] }, ''), /Некорректный/);
+});
+test('reviewRichDocument builds a validated chapter with numbered recommendations', () => {
+  const rich = require('../lib/ai-rich-text');
+  const result = ai.reviewResult(JSON.stringify({
+    score: 65.4,
+    summary: 'Основной сценарий описан, но не хватает критериев приёмки.',
+    recommendations: [
+      { category: 'Критерии приёмки', severity: 'major', problem: 'Нет измеримых критериев приёмки.', evidence: 'Система должна быстро сохранять документ.', fix: 'Добавьте измеримые критерии приёмки.' },
+      { category: 'Граничные случаи', severity: 'blocker', problem: 'Не описано поведение при сбое.', evidence: 'При сбое сервиса…', fix: 'Опишите поведение при недоступности сервиса.' }
+    ]
+  }));
+  const chapter = ai.reviewRichDocument(result, 'https://conf.example/pages/42');
+  assert.equal(chapter.type, 'doc');
+  assert.deepEqual(chapter.content.map(node => node.type),
+    ['heading', 'paragraph', 'heading', 'paragraph', 'blockquote', 'paragraph', 'heading', 'paragraph', 'blockquote', 'paragraph']);
+  assert.equal(chapter.content[0].content[0].text, 'Проверка качества документации');
+  assert.equal(chapter.content[1].content[0].bold, true);
+  assert.match(chapter.content[1].content[0].text, /Готовность к разработке: 65%/);
+  assert.match(rich.text(chapter), /критериев приёмки\./);
+  assert.equal(chapter.content[2].content[0].text, '1. [граничные случаи · blocker]');
+  assert.equal(chapter.content[6].content[0].text, '2. [критерии приёмки · major]');
+  assert.equal(chapter.content[4].type, 'blockquote');
+  assert.match(rich.text(chapter), /Как исправить: Опишите поведение при недоступности сервиса\./);
+  for (const bad of [
+    null,
+    { format: 'review', score: 50, summary: 's', recommendations: [] },
+    { format: 'review', score: '50', summary: 's', recommendations: result.recommendations },
+    { format: 'review', score: 50, summary: 's', recommendations: [{ category: 'x', severity: 'critical', problem: 'p', evidence: 'e', fix: 'f' }] },
+    { format: 'review', score: 50, summary: 's', recommendations: [{ category: 'x', severity: 'major', problem: '', evidence: 'e', fix: 'f' }] }
+  ]) assert.throws(() => ai.reviewRichDocument(bad, 'https://conf.example/pages/42'), /Некорректн/);
+});
+test('chat sends the conversation unchanged and returns unfenced reply text', async () => {
+  const messages = [
+    { role: 'system', content: 'sys' },
+    { role: 'user', content: 'u1' },
+    { role: 'assistant', content: 'a1' },
+    { role: 'user', content: 'u2' }
+  ];
+  const result = await ai.chat(settings, messages, async (url, options) => {
+    assert.equal(url, 'https://example.test/v1/chat/completions');
+    const body = JSON.parse(options.body);
+    assert.equal(body.model, 'chat-model'); assert.equal(body.stream, false);
+    assert.deepEqual(body.messages, messages);
+    return new Response(JSON.stringify({ choices: [{ finish_reason: 'stop', message: { content: '```markdown\n# Задачи на разработку\n```' } }] }));
+  });
+  assert.equal(result, '# Задачи на разработку');
+});
+test('chat rejects oversized histories and invalid message lists without requesting', async () => {
+  const noFetch = () => { throw new Error('unexpected fetch'); };
+  await assert.rejects(ai.chat(settings, [{ role: 'system', content: 's' }, { role: 'user', content: 'x'.repeat(100001) }], noFetch), /100 000/);
+  await assert.rejects(ai.chat(settings, [], noFetch), /истори/);
+  await assert.rejects(ai.chat(settings, [{ role: 'user', content: '  ' }], noFetch), /истори/);
+  await assert.rejects(ai.chat({ ...settings, model: '' }, [{ role: 'user', content: 'x' }], noFetch), /модель/);
+});
+test('chat reports truncated and empty completions like transform', async () => {
+  await assert.rejects(ai.chat(settings, [{ role: 'user', content: 'x' }], async () => new Response(JSON.stringify({ choices: [{ finish_reason: 'length', message: { content: 'partial' } }] }))), /не завершил/);
+  await assert.rejects(ai.chat(settings, [{ role: 'user', content: 'x' }], reply('')), /пустой/);
+});
