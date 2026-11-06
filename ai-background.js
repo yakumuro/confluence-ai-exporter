@@ -1,5 +1,5 @@
 'use strict';
-importScripts('lib/ai-rich-text.js', 'lib/ai-client.js', 'lib/ai-shortcuts.js', 'lib/ai-scenarios.js');
+importScripts('lib/ai-rich-text.js', 'lib/ai-client.js', 'lib/ai-scenarios.js');
 const AI_COMMANDS = {
   review: 'Проверить полноту требований…',
   spelling: 'Исправить орфографию и пунктуацию', json: 'Изменить или дополнить JSON/XML…',
@@ -47,8 +47,7 @@ async function showAIDialog(tabId, action, snapshot, error, locked) {
     let scenarios = { presets: MDExporterAIScenarios.PRESETS, custom: [] };
     try { scenarios = await scenariosForUI(); } catch (_) { /* Dialog remains usable without saved scenarios. */ }
     await chrome.tabs.sendMessage(tabId, {
-      type: 'md-ai-open', action, snapshot, error, locked,
-      shortcut: MDExporterAIShortcuts.label(action), scenarios
+      type: 'md-ai-open', action, snapshot, error, locked, scenarios
     }, { frameId: 0 });
   } catch (failure) {
     showBadge(tabId, '!', '#de350b');
@@ -133,11 +132,6 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
       await chrome.storage.local.set({ [key]: saved });
       return { ok: true, scenario, created: !existing, updated: !!existing, scenarios: { presets: MDExporterAIScenarios.PRESETS, custom: saved } };
     })().then(respond, error => respond({ ok: false, error: error.message }));
-    return true;
-  }
-  if (message && message.type === 'md-ai-shortcut' && sender.tab && sender.tab.id != null && AI_COMMANDS[message.action]) {
-    openAI(sender.tab.id, sender.frameId ?? 0, message.action)
-      .then(() => respond({ ok: true }), error => respond({ ok: false, error: error.message }));
     return true;
   }
   if (message && message.type === 'MD_EXPORT_PERSIST_JOB' && sender.tab && message.job && typeof message.job === 'object') {

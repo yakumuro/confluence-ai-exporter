@@ -17,7 +17,6 @@ function harness(session = {}) {
   const context = {
     importScripts() {}, console, URL, Date,
     MDExporterAI: { ...ai, transform: async () => 'Исправленный текст' },
-    MDExporterAIShortcuts: require('../lib/ai-shortcuts'),
     MDExporterAIScenarios: scenariosApi,
     showBadge() {},
     chrome: {
@@ -176,26 +175,6 @@ test('all context actions capture in the clicked iframe but open their dialog in
     assert.equal(h.session['aiJob:captured'].uiFrameId, 0);
     assert.equal(h.session['aiJob:captured'].frameId, 2);
   }
-});
-test('keyboard shortcuts capture the sending frame and open the matching action', async () => {
-  const h = harness();
-  const response = await h.message(
-    { type: 'md-ai-shortcut', action: 'diagram' },
-    { tab: { id: 7 }, frameId: 3 }
-  );
-  assert.equal(response.ok, true);
-  const capture = h.calls.find(call => call[0] === 'script' && call[1].args && call[1].args[0] === 'capture')[1];
-  assert.equal(capture.target.frameIds[0], 3);
-  assert.equal(capture.args[1][0], 'diagram');
-  const delivered = h.calls.find(call => call[0] === 'tab-message');
-  assert.equal(delivered[2].action, 'diagram');
-  assert.equal(delivered[2].shortcut, 'Ctrl + Alt + Shift + 3');
-  assert.equal(h.session['aiJob:captured'].action, 'diagram');
-});
-test('keyboard shortcut message cannot launch an unknown AI action', async () => {
-  const h = harness();
-  assert.equal(await h.message({ type: 'md-ai-shortcut', action: 'unknown' }), undefined);
-  assert.equal(h.calls.filter(call => call[0] === 'script').length, 0);
 });
 test('application can be confirmed to insert the answer after the original selection', async () => {
   const h = harness({ 'aiJob:id': job({ uiFrameId: 0, result: 'Добавленный текст' }) });

@@ -15,9 +15,10 @@ test('public manifest uses temporary active-tab access instead of a hard-coded C
   assert(fs.existsSync(path.join(root, manifest.side_panel.default_path)));
 });
 
-test('panel dynamically installs editor integration and shortcuts on the active tab', () => {
+test('panel dynamically installs editor integration on the active tab', () => {
   const popup = fs.readFileSync(path.join(root, 'popup/popup.js'), 'utf8');
-  for (const file of ['content/content.js', 'lib/ai-shortcuts.js', 'content/ai-shortcuts.js']) assert(popup.includes(`'${file}'`));
+  assert(popup.includes("'content/content.js'"));
+  assert(!popup.includes('ai-shortcuts'));
   assert(popup.includes('chrome.scripting.executeScript'));
 });
 

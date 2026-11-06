@@ -10,9 +10,7 @@
     'lib/asciidoc.js',
     'lib/markdown-importer.js',
     'lib/confluence-api.js',
-    'content/content.js',
-    'lib/ai-shortcuts.js',
-    'content/ai-shortcuts.js'
+    'content/content.js'
   ];
   const SETTINGS_KEY = 'mdExporterSettings';
   const AI_KEY = 'mdExporterAI';

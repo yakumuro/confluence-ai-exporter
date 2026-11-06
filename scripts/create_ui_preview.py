@@ -177,7 +177,6 @@ window.chrome = { runtime: {
 window.addEventListener('load', () => {
   openDialog({
     type: 'md-ai-open', action,
-    shortcut: 'Ctrl + Alt + Shift + 7',
     snapshot: { id: 'preview', source: sample.source, readOnly: previewAction === 'readonly' },
     scenarios: { presets: [], custom: [] }
   });
