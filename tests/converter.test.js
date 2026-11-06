@@ -10,7 +10,7 @@ const LIMIT = converter.ZIP_ENTRY_PATH_LIMIT_BYTES;
 const WINDOWS_LIMIT = 258;
 
 function entryPath(page) {
-  return page.segments.join('/') + '/' + page.fileName;
+  return page.segments.concat(page.fileName).join('/');
 }
 
 function attachmentPath(page, name) {
@@ -56,6 +56,16 @@ test('не меняет имена страниц, если пути помещ�
     '2.6.2.3 Ролевая модель/2.6.2.3.1 [MVP] FSD Интеграция с Keycloak/2.6.2.3.1 [MVP] FSD Интеграция с Keycloak.md',
     '2.6.2.3 Ролевая модель/2.6.2.3.1 [MVP] FSD Интеграция с Keycloak/2.6.2.3.1.1 FE Вход в систему/2.6.2.3.1.1 FE Вход в систему.md'
   ]);
+});
+
+test('создает пути AsciiDoc с расширением adoc и соблюдает лимит', function () {
+  const planner = converter.createPathPlanner({ maxPathBytes: LIMIT, extension: '.adoc' });
+  const pages = converter.planPageTree({ id: '100', title: longTitle('2.6.2.3', 100) }, chainTree(3), planner);
+
+  for (const page of pages) {
+    assert.ok(page.fileName.endsWith('.adoc'));
+    assert.ok(converter.utf8Length(entryPath(page)) <= LIMIT);
+  }
 });
 
 test('обрезает длинные названия так, чтобы пути внутри архива остались в лимите', function () {
@@ -141,6 +151,30 @@ test('сообщает о сокращении имен', function () {
   const longPlanner = converter.createPathPlanner({ maxPathBytes: LIMIT });
   converter.planPageTree({ id: '100', title: longTitle('2.6.2.3', 200) }, [], longPlanner);
   assert.equal(longPlanner.shortened(), true);
+});
+
+test('компактные ZIP-пути сохраняют полные имена и не превышают лимит Windows', function () {
+  const planner = converter.createPathPlanner({ maxPathBytes: Infinity });
+  const original = converter.planPageTree({ id: '100', title: longTitle('2.6.2.3', 100) }, chainTree(6), planner);
+  const pages = converter.compactPagePaths(original);
+
+  assert.ok(pages.some(function (page) { return page.segments.length === 0 && !page.isRoot; }));
+  pages.forEach(function (page, index) {
+    assert.ok(page.fileName.startsWith(page.title), page.fileName);
+    assert.ok(page.fileName.endsWith('.md'));
+    assert.ok(converter.utf8Length(entryPath(page)) <= 258, entryPath(page));
+  });
+});
+
+test('компактные ZIP-пути сохраняют иерархию коротких веток и уникальность имен', function () {
+  const planner = converter.createPathPlanner({ maxPathBytes: Infinity });
+  const original = converter.planPageTree({ id: '1', title: 'Root' }, [
+    { id: '2', title: 'Same', children: [] },
+    { id: '3', title: 'Same', children: [] }
+  ], planner);
+  const pages = converter.compactPagePaths(original);
+
+  assert.deepEqual(pages.map(entryPath), ['Root.md', 'Root/Same.md', 'Root/Same (2).md']);
 });
 
 test('truncateToBytes не разрывает символы и убирает хвостовые точки и пробелы', function () {

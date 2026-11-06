@@ -3,220 +3,126 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Confluence Markdown</title>
+  <meta name="color-scheme" content="light">
+  <title>Confluence AI Exporter — AI-панель</title>
+  <link rel="icon" type="image/png" sizes="128x128" href="../icons/icon128.png">
   <link rel="stylesheet" href="popup.css">
 </head>
 <body>
   <div class="wrap">
     <header class="head">
-      <div class="head-row">
-        <div class="brand">
-          <div class="brand-mark" aria-hidden="true">
-            <svg viewBox="0 0 24 24" fill="none">
-              <path d="M5 7h14M5 7l3-3M5 7l3 3M19 17H5m14 0-3-3m3 3-3 3" />
-            </svg>
-          </div>
-          <div class="head-title">Confluence <span>Markdown</span></div>
-        </div>
-        <button id="refresh" class="icon-button" type="button"
-          aria-label="Обновить страницу Confluence" title="Обновить страницу Confluence">
-          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-            <path d="M20 11a8.1 8.1 0 0 0-14.7-4L3 10" />
-            <path d="M3 4v6h6" />
-            <path d="M4 13a8.1 8.1 0 0 0 14.7 4L21 14" />
-            <path d="M21 20v-6h-6" />
-          </svg>
+      <div class="brand">
+        <img class="brand-logo" src="../icons/logo.svg" alt="" width="44" height="44">
+        <div class="brand-copy"><div class="head-title">Confluence AI Exporter</div><div id="contextIndicator" class="head-subtitle context-indicator is-loading" tabindex="0" aria-describedby="contextTooltip"><span class="status-indicator" aria-hidden="true"></span><span id="contextLabel" role="status" aria-live="polite">Проверка</span><span id="contextTooltip" class="context-tooltip" role="tooltip"><strong id="contextTitle">Проверяем страницу</strong><span id="contextSubtitle">Получаем данные из Confluence…</span></span></div></div>
+      </div>
+      <div class="head-actions">
+        <button id="showOnboarding" class="icon-button" type="button" aria-label="Как пользоваться расширением" title="Как пользоваться расширением">?</button>
+        <button id="aiSettings" class="icon-button" type="button" aria-label="Настройки AI" title="Настройки AI">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m12 3 1.1 2.2a7.6 7.6 0 0 1 2.1.9l2.3-.6 1.5 2.6-1.6 1.8a7.6 7.6 0 0 1 0 2.2l1.6 1.8-1.5 2.6-2.3-.6a7.6 7.6 0 0 1-2.1.9L12 19l-1.1-2.2a7.6 7.6 0 0 1-2.1-.9l-2.3.6-1.5-2.6 1.6-1.8a7.6 7.6 0 0 1 0-2.2L5 8.1l1.5-2.6 2.3.6a7.6 7.6 0 0 1 2.1-.9L12 3Z" /><circle cx="12" cy="11" r="2.5" /></svg>
+        </button>
+        <button id="refresh" class="icon-button" type="button" aria-label="Обновить данные страницы" title="Обновить данные страницы">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M20 11a8.1 8.1 0 0 0-14.7-4L3 10M3 4v6h6M4 13a8.1 8.1 0 0 0 14.7 4L21 14m0 6v-6h-6" /></svg>
+        </button>
+        <button id="closePopup" class="icon-button" type="button" aria-label="Закрыть панель" title="Закрыть панель">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m7 7 10 10M17 7 7 17" /></svg>
         </button>
       </div>
     </header>
 
     <div id="alert" class="alert hidden" role="alert"></div>
 
-    <nav id="viewTabs" class="view-tabs" role="tablist" aria-label="Операции с Markdown">
-      <button id="exportTab" class="view-tab" type="button" role="tab"
-        aria-selected="true" aria-controls="exportPanel" tabindex="0" data-panel="export">
-        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-          <path d="M12 4v11" />
-          <path d="m7 11 5 5 5-5" />
-          <path d="M5 16v2a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-2" />
-        </svg>
-        Экспорт
+    <nav id="viewTabs" class="view-tabs" role="tablist" aria-label="Разделы Confluence AI Exporter">
+      <button id="aiTab" class="view-tab" type="button" role="tab" aria-selected="true" aria-controls="aiPanel" tabindex="0" data-panel="ai">
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m12 3 1.6 4.4L18 9l-4.4 1.6L12 15l-1.6-4.4L6 9l4.4-1.6L12 3Z" /><path d="m18.5 15 .9 2.6 2.6.9-2.6.9-.9 2.6-.9-2.6-2.6-.9 2.6-.9.9-2.6Z" /></svg>AI
       </button>
-      <button id="importTab" class="view-tab" type="button" role="tab"
-        aria-selected="false" aria-controls="importPanel" tabindex="-1" data-panel="import">
-        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-          <path d="M12 15V4" />
-          <path d="m7 9 5-5 5 5" />
-          <path d="M5 14v4a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-4" />
-        </svg>
-        Импорт
+      <button id="exportTab" class="view-tab" type="button" role="tab" aria-selected="false" aria-controls="exportPanel" tabindex="-1" data-panel="export">
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 4v11m-5-4 5 5 5-5M5 16v2a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-2" /></svg>Экспорт
+      </button>
+      <button id="importTab" class="view-tab" type="button" role="tab" aria-selected="false" aria-controls="importPanel" tabindex="-1" data-panel="import">
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 15V4m-5 5 5-5 5 5M5 14v4a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-4" /></svg>Импорт
       </button>
     </nav>
 
     <main>
-      <section id="exportPanel" class="tab-panel" role="tabpanel" aria-labelledby="exportTab">
-        <div class="panel-heading">
-          <div>
-            <div class="panel-kicker">ЭКСПОРТ</div>
-            <h2>Скачать страницу</h2>
-          </div>
-          <div class="help-wrap">
-            <button class="info-button" type="button" aria-label="Как пользоваться экспортом"
-              aria-describedby="exportHelp">
-              <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                <circle cx="12" cy="12" r="10" />
-                <path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3" />
-                <path d="M12 17h.01" />
-              </svg>
-            </button>
-            <div id="exportHelp" class="help-tooltip" role="tooltip">
-              Откройте нужную страницу Confluence, выберите режим выгрузки и нажмите «Скачать».
-            </div>
-          </div>
-        </div>
-
-        <div id="settings" class="card hidden">
-          <div class="card-title">Что выгружать</div>
-          <label class="option">
-            <input type="radio" name="mode" value="page" checked>
-            <span class="option-body">
-              <b>Только текущую страницу</b>
-              <em>Один md-файл с названием страницы</em>
-            </span>
-          </label>
-          <label class="option">
-            <input type="radio" name="mode" value="tree">
-            <span class="option-body">
-              <b>Страницу и дочерние</b>
-              <em>ZIP-архив с папками как в Confluence</em>
-            </span>
-          </label>
-          <div id="treeBlock" class="hidden">
-            <div class="tree-toolbar">
-              <button id="selectAll" class="link" type="button">Выбрать все</button>
-              <button id="selectNone" class="link" type="button">Снять все</button>
-              <span id="treeInfo" class="muted"></span>
-            </div>
-            <div id="tree" class="tree"><div class="muted">Загрузка структуры…</div></div>
-          </div>
-        </div>
-
-        <div id="settingsAttachments" class="card hidden">
-          <label class="option">
-            <input type="checkbox" id="attachments" checked>
-            <span class="option-body">
-              <b>Выгружать вложения</b>
-              <em>Изображения и файлы попадут в папку attachments</em>
-            </span>
-          </label>
-        </div>
-
-        <div id="outputHint" class="hint hidden"></div>
-        <button id="download" class="primary" type="button" disabled>
-          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-            <path d="M12 4v11" />
-            <path d="m7 11 5 5 5-5" />
-            <path d="M5 16v2a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-2" />
-          </svg>
-          Скачать
+      <section id="aiPanel" class="tab-panel" role="tabpanel" aria-labelledby="aiTab">
+        <div class="panel-heading ai-heading"><div><h2>AI-ассистент</h2><p>Выделите текст на странице и выберите действие</p></div></div>
+        <div class="ai-section-divider"><span>Общие проверки документа</span></div>
+        <button class="ai-feature-card review-card" type="button" data-ai-action="review">
+          <span class="ai-feature-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M4 19V9m6 10V5m6 14v-7m4 7H2" /></svg></span>
+          <span class="ai-feature-copy"><b>Проверить полноту требований</b><em>Оценка готовности, пробелы и рекомендации</em></span>
         </button>
-        <button id="cancel" class="ghost hidden" type="button">Отменить экспорт</button>
-
-        <div id="progressBlock" class="card hidden">
-          <div class="progress"><div id="progressFill"></div></div>
-          <div id="progressText" class="muted">…</div>
-          <button id="errorsToggle" class="link hidden" type="button">Показать замечания</button>
-          <ul id="errors" class="errors hidden"></ul>
+        <div class="ai-section-divider"><span>Точечные правки выделенного текста</span></div>
+        <div class="ai-action-grid">
+          <button class="ai-action-card" type="button" data-ai-action="spelling">
+            <span class="ai-action-icon" aria-hidden="true">Aa</span><span><b>Исправить текст</b><em>Орфография и пунктуация</em></span>
+          </button>
+          <button class="ai-action-card" type="button" data-ai-action="custom">
+            <span class="ai-action-icon" aria-hidden="true">✦</span><span><b>Своя инструкция</b><em>Сократить, переписать, дополнить</em></span>
+          </button>
+          <button class="ai-action-card" type="button" data-ai-action="json">
+            <span class="ai-action-icon code-icon" aria-hidden="true">{ }</span><span><b>JSON и XML</b><em>Исправить или изменить структуру</em></span>
+          </button>
+          <button class="ai-action-card" type="button" data-ai-action="diagram">
+            <span class="ai-action-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="6" height="5" rx="1" /><rect x="15" y="16" width="6" height="5" rx="1" /><path d="M9 5h6a3 3 0 0 1 3 3v8" /></svg></span><span><b>Исправить схему</b><em>Mermaid и PlantUML</em></span>
+          </button>
+          <button class="ai-action-card" type="button" data-ai-action="format">
+            <span class="ai-action-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M5 5h14M5 10h9M5 15h14M5 20h9" /></svg></span><span><b>Оформить текст</b><em>Заголовки, акценты и списки</em></span>
+          </button>
+          <button class="ai-action-card" type="button" data-ai-action="table">
+            <span class="ai-action-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="16" rx="2" /><path d="M3 10h18M9 4v16M15 4v16" /></svg></span><span><b>Изменить ячейки</b><em>Текст и цвета в таблице</em></span>
+          </button>
         </div>
+        <div class="ai-tip"><span aria-hidden="true">⌘</span><p>Можно также вызвать действия из контекстного меню выделенного текста.</p></div>
+      </section>
+
+      <section id="exportPanel" class="tab-panel hidden" role="tabpanel" aria-labelledby="exportTab" hidden>
+        <div class="panel-heading"><div><h2>Скачать страницу</h2><p>Сохраните содержимое в Markdown или AsciiDoc</p></div></div>
+        <div id="settings" class="card hidden">
+          <div class="card-title">Формат файла</div>
+          <div class="format-options">
+            <label class="format-option"><input type="radio" name="exportFormat" value="markdown" checked><span><b>Markdown</b><em>.md</em></span></label>
+            <label class="format-option"><input type="radio" name="exportFormat" value="asciidoc"><span><b>AsciiDoc</b><em>.adoc</em></span></label>
+          </div>
+          <div class="format-divider"></div>
+          <div class="card-title">Область экспорта</div>
+          <div class="option-list">
+            <label class="option"><input type="radio" name="mode" value="page" checked><span class="option-body"><b>Текущая страница</b><em>Один файл с названием страницы</em></span><span class="option-tag">FILE</span></label>
+            <label class="option"><input type="radio" name="mode" value="tree"><span class="option-body"><b>Страница и вложенные</b><em>ZIP-архив со структурой Confluence</em></span><span class="option-tag">ZIP</span></label>
+          </div>
+          <div id="treeBlock" class="tree-block hidden">
+            <div class="tree-toolbar"><div class="tree-actions"><button id="selectAll" class="link" type="button">Выбрать все</button><button id="selectNone" class="link" type="button">Снять выбор</button></div><span id="treeInfo" class="muted"></span></div>
+            <div id="tree" class="tree"><div class="loading-row"><span class="spinner"></span>Загрузка структуры…</div></div>
+          </div>
+        </div>
+        <div id="settingsAttachments" class="card compact-card hidden">
+          <label class="option switch-option"><span class="option-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="m21 8-9-5-9 5 9 5 9-5ZM3 12l9 5 9-5M3 16l9 5 9-5" /></svg></span><span class="option-body"><b>Включить вложения</b><em>Изображения и файлы в папке attachments</em></span><input type="checkbox" id="attachments" class="switch-input" checked><span class="switch" aria-hidden="true"></span></label>
+        </div>
+        <div class="primary-actions"><button id="download" class="primary" type="button" disabled><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 4v11m-5-4 5 5 5-5M5 16v2a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-2" /></svg><span id="downloadLabel">Скачать Markdown</span></button><button id="cancel" class="secondary danger-button hidden" type="button">Остановить экспорт</button></div>
+        <div id="outputHint" class="hint hidden"></div>
+        <div id="progressBlock" class="card progress-card hidden" aria-live="polite"><div class="progress-heading"><span>Выполнение экспорта</span><span id="progressText" class="muted">…</span></div><div class="progress"><div id="progressFill"></div></div><button id="errorsToggle" class="link hidden" type="button">Показать замечания</button><ul id="errors" class="errors hidden"></ul></div>
       </section>
 
       <section id="importPanel" class="tab-panel hidden" role="tabpanel" aria-labelledby="importTab" hidden>
-        <div class="panel-heading">
-          <div>
-            <div class="panel-kicker">ИМПОРТ</div>
-            <h2>Загрузить Markdown</h2>
-          </div>
-          <div class="help-wrap">
-            <button class="info-button" type="button" aria-label="Как пользоваться импортом"
-              aria-describedby="importHelp">
-              <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                <circle cx="12" cy="12" r="10" />
-                <path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3" />
-                <path d="M12 17h.01" />
-              </svg>
-            </button>
-            <div id="importHelp" class="help-tooltip" role="tooltip">
-              Откройте страницу Confluence в режиме редактирования. Выберите Markdown-файл и укажите, добавить его в начало или конец страницы.
-            </div>
-          </div>
-        </div>
-
+        <div class="panel-heading"><div><h2>Загрузить документ</h2><p>Добавьте Markdown или AsciiDoc на открытую страницу</p></div></div>
         <div id="importCard" class="card hidden">
-          <label class="file-option" for="markdownFile">
-            <input id="markdownFile" type="file" accept=".md,.markdown,text/markdown" aria-label="Выбрать файл Markdown">
-          </label>
-          <div class="card-divider"></div>
-          <div class="field-label">Что сделать с содержимым страницы</div>
-          <label class="option">
-            <input type="radio" name="importMode" value="prepend">
-            <span class="option-body">
-              <b>Добавить в начало страницы</b>
-              <em>Содержимое будет добавлено в начало страницы</em>
-            </span>
-          </label>
-          <label class="option">
-            <input type="radio" name="importMode" value="append" checked>
-            <span class="option-body">
-              <b>Добавить в конец страницы</b>
-              <em>Содержимое будет добавлено в конец страницы</em>
-            </span>
-          </label>
-          <fieldset class="macro-options">
-            <legend>Макросы и дополнительные преобразования</legend>
-            <label class="macro-option">
-              <input id="importCodeMacro" type="checkbox" checked>
-              <span>Блоки кода как макрос Code Block</span>
-            </label>
-            <div class="macro-suboptions">
-              <label class="macro-option">
-                <input id="importCodeTitle" type="checkbox" checked>
-                <span>Добавлять заголовок «Блок кода»</span>
-              </label>
-              <label class="macro-option">
-                <input id="importCodeLanguage" type="checkbox" checked>
-                <span>Передавать язык кода, например sql или mermaid</span>
-              </label>
-            </div>
-            <label class="macro-option">
-              <input id="importExpandMacro" type="checkbox" checked>
-              <span>Оборачивать блоки кода в «Раскрыть»</span>
-            </label>
-            <div class="macro-suboptions">
-              <label class="macro-option">
-                <input id="importExpandTitle" type="checkbox" checked>
-                <span>Добавлять заголовок «Раскрыть»</span>
-              </label>
-            </div>
-            <label class="macro-option">
-              <input id="importPlantUmlMacro" type="checkbox" checked>
-              <span>Преобразовывать PlantUML в макрос диаграммы</span>
-            </label>
-          </fieldset>
-          <button id="importButton" class="primary" type="button" disabled>
-            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <path d="M12 15V4" />
-              <path d="m7 9 5-5 5 5" />
-              <path d="M5 14v4a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-4" />
-            </svg>
-            Импортировать в Confluence
-          </button>
-          <div id="importStatus" class="import-status hidden" role="status"></div>
+          <label class="file-option" for="markdownFile" id="fileDropZone"><input id="markdownFile" class="file-input" type="file" accept=".md,.markdown,.mdown,.mkd,.adoc,.asciidoc,.asc,text/markdown,text/plain" aria-label="Выбрать файл Markdown или AsciiDoc"><span class="file-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9l-6-6Z" /><path d="M14 3v6h6M8 15l2-2 2 2 3-3 2 2" /></svg></span><span class="file-copy"><b id="fileDropTitle">Выберите Markdown или AsciiDoc</b><em id="fileDropHint">.md, .markdown, .adoc, .asciidoc · до 2 МБ</em></span><span class="file-button">Обзор</span></label>
+          <div class="card-divider"></div><div class="field-label">Место вставки</div>
+          <div class="option-list import-modes"><label class="option"><input type="radio" name="importMode" value="prepend"><span class="option-body"><b>В начало страницы</b><em>Перед текущим содержимым</em></span></label><label class="option"><input type="radio" name="importMode" value="append" checked><span class="option-body"><b>В конец страницы</b><em>После текущего содержимого</em></span></label></div>
+          <details class="advanced-options"><summary><span>Настройки преобразования</span><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m8 10 4 4 4-4" /></svg></summary><fieldset class="macro-options"><legend class="sr-only">Макросы и дополнительные преобразования</legend><label class="macro-option"><input id="importCodeMacro" type="checkbox" checked><span>Блоки кода как макрос Code Block</span></label><div class="macro-suboptions"><label class="macro-option"><input id="importCodeTitle" type="checkbox" checked><span>Добавлять заголовок «Блок кода»</span></label><label class="macro-option"><input id="importCodeLanguage" type="checkbox" checked><span>Передавать язык кода</span></label></div><label class="macro-option"><input id="importExpandMacro" type="checkbox" checked><span>Оборачивать блоки кода в «Раскрыть»</span></label><div class="macro-suboptions"><label class="macro-option"><input id="importExpandTitle" type="checkbox" checked><span>Добавлять заголовок «Раскрыть»</span></label></div><label class="macro-option"><input id="importPlantUmlMacro" type="checkbox" checked><span>Преобразовывать PlantUML в макрос диаграммы</span></label></fieldset></details>
+          <button id="importButton" class="primary" type="button" disabled><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 15V4m-5 5 5-5 5 5M5 14v4a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-4" /></svg>Импортировать</button><div id="importStatus" class="import-status hidden" role="status" aria-live="polite"></div>
         </div>
       </section>
-
     </main>
   </div>
-
+  <section id="onboarding" class="onboarding" role="dialog" aria-modal="true" aria-labelledby="storyTitle" hidden>
+    <div class="onboarding-top"><span class="onboarding-brand"><img src="../icons/logo.svg" alt="" width="26" height="26">CONFLUENCE AI EXPORTER</span><button id="storySkip" class="onboarding-skip" type="button">Пропустить</button></div>
+    <div id="storyProgress" class="story-progress" aria-label="Этапы знакомства"></div>
+    <article id="storyCard" class="story-card" aria-live="polite">
+      <div id="storyVisual" class="story-visual" aria-hidden="true"></div>
+      <div class="story-copy"><h2 id="storyTitle"></h2><p id="storyText"></p></div>
+    </article>
+    <div class="story-footer"><button id="storyPrev" type="button">Назад</button><button id="storyNext" class="story-next" type="button">Далее</button></div>
+  </section>
   <script src="popup.js"></script>
 </body>
 </html>

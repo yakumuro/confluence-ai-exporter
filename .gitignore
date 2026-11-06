@@ -1,0 +1,35 @@
+# Generated browser previews and local screenshots
+artifacts/
+store-assets/screenshot-*.png
+_preview.html
+
+# Extension packages
+dist/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+
+# Dependencies and test output
+node_modules/
+test-results/
+playwright-report/
+
+# Logs and temporary files
+*.log
+*.tmp
+*.temp
+.tmp/
+
+# OS and editor files
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
+
+# Local secrets
+.env
+.env.*
+!.env.example

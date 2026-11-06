@@ -1,6 +1,6 @@
 /**
- * Content script: экспортирует страницы Confluence в Markdown и импортирует
- * локальные Markdown-файлы обратно в storage format.
+ * Content script: экспортирует страницы Confluence в Markdown или AsciiDoc
+ * и импортирует локальные документы обратно в storage format.
  *
  * Запускается из popup через chrome.scripting.executeScript (activeTab),
  * поэтому все запросы идут в контексте открытой страницы Confluence.
@@ -13,6 +13,7 @@
 
   const Api = window.MDExporterApi;
   const Converter = window.MDExporterConverter;
+  const AsciiDoc = window.MDExporterAsciiDoc;
   const Zip = window.MDExporterZip;
   const MarkdownImporter = window.MDExporterMarkdownImporter;
 
@@ -68,11 +69,11 @@
       }
 
       persistPending = false;
-      const payload = {};
-      payload[jobKey()] = snapshotJob();
+      // Local storage is restricted to trusted extension contexts to protect AI keys.
+      const payload = { type: 'MD_EXPORT_PERSIST_JOB', job: snapshotJob() };
 
       try {
-        chrome.storage.local.set(payload, function () {
+        chrome.runtime.sendMessage(payload, function () {
           // Read lastError inside the callback to acknowledge storage failures.
           if (chrome.runtime.lastError) { /* ignore */ }
           writePending();
@@ -162,14 +163,13 @@
     return total;
   }
 
-  // Предупреждает, что часть имен в архиве сокращена ради совместимости с Проводником.
   function shortenedHint() {
     const planners = Array.prototype.slice.call(arguments).filter(Boolean);
     const shortened = planners.some(function (planner) {
       return planner.shortened && planner.shortened();
     });
     return shortened
-      ? '. Часть длинных имен сокращена, чтобы архив открывался в Проводнике Windows'
+      ? '. Часть длинных имен вложений сокращена для совместимости с Проводником Windows'
       : '';
   }
 
@@ -204,13 +204,15 @@
     }, 120000);
   }
 
-  async function importMarkdown(message) {
+  async function importDocument(message) {
     if (running || importing) return { ok: false, error: 'Другая операция уже выполняется' };
-    if (!MarkdownImporter) return { ok: false, error: 'Модуль импорта Markdown не загружен' };
+    if (!MarkdownImporter) return { ok: false, error: 'Модуль импорта документов не загружен' };
 
     const mode = message && message.mode === 'prepend' ? 'prepend' : 'append';
-    if (typeof (message && message.markdown) !== 'string') {
-      return { ok: false, error: 'Не удалось прочитать содержимое Markdown-файла' };
+    const format = message && message.format === 'asciidoc' ? 'asciidoc' : 'markdown';
+    const source = message && typeof message.source === 'string' ? message.source : message && message.markdown;
+    if (typeof source !== 'string') {
+      return { ok: false, error: 'Не удалось прочитать содержимое файла' };
     }
 
     importing = true;
@@ -218,8 +220,9 @@
       const pageId = await Api.resolvePageIdFromUrl();
       if (!pageId) throw new Error('Не удалось определить страницу Confluence в активной вкладке');
       const page = await Api.getPage(pageId, ['version', 'space']);
-      const converted = MarkdownImporter.parseMarkdown(message.markdown, {
+      const converted = MarkdownImporter.parseDocument(source, {
         pageTitle: page.title || '',
+        format: format,
         macroOptions: message.macroOptions
       });
       const saved = await Api.updatePage(pageId, converted.storage, mode);
@@ -241,6 +244,8 @@
   async function start(options) {
     if (running || importing) return { ok: false, error: 'Другая операция уже выполняется' };
     if (!Api || !Converter || !Zip) return { ok: false, error: 'Модули расширения не загружены' };
+    const format = options.format === 'asciidoc' ? 'asciidoc' : 'markdown';
+    if (format === 'asciidoc' && !AsciiDoc) return { ok: false, error: 'Модуль экспорта AsciiDoc не загружен' };
 
     running = true;
     cancelRequested = false;
@@ -257,10 +262,8 @@
       const treeNodes = Array.isArray(options.tree) ? options.tree : [];
       const isMulti = countSelectedPages(treeNodes) + 1 > 1;
       const pagePlanner = Converter.createPathPlanner({
-        // Проводник Windows не открывает архив с длинными путями внутри,
-        // поэтому в выгрузке дерева имена ограничиваются по размеру в байтах.
-        maxPathBytes: isMulti ? Converter.ZIP_ENTRY_PATH_LIMIT_BYTES : Infinity,
-        reserveAttachments: isMulti && !!options.includeAttachments
+        maxPathBytes: Infinity,
+        extension: format === 'asciidoc' ? '.adoc' : '.md'
       });
       // Имена файлов внутри любого архива ограничиваются по той же причине:
       // в одностраничной выгрузке это отдельный архив с вложениями.
@@ -269,7 +272,7 @@
       });
 
       const allPages = Converter.planPageTree({ id: pageId, title: rootTitle }, treeNodes, pagePlanner);
-      const pages = allPages.filter(function (page) { return page.selected; });
+      const pages = Converter.compactPagePaths(allPages.filter(function (page) { return page.selected; }));
       if (!pages.length) throw new Error('Не выбрано ни одной страницы для экспорта');
       for (const treeError of (Array.isArray(options.treeErrors) ? options.treeErrors : [])) {
         const title = treeError && treeError.title ? ' «' + treeError.title + '»' : '';
@@ -296,7 +299,7 @@
           : 'Выгрузка одной страницы'
       });
 
-      let singleMarkdown = null;
+      let singleDocument = null;
       let singleFileName = '';
       let attachmentsSaved = 0;
 
@@ -317,6 +320,7 @@
         const storage = page.body && page.body.storage ? page.body.storage.value : '';
         const fileName = pageIndex.get(item.id).fileName;
         const currentSegments = item.segments;
+        const currentPath = currentSegments.length ? currentSegments.join('/') + '/' : '';
 
         const attachmentLookup = new Map();
         const pendingAttachments = [];
@@ -370,10 +374,11 @@
           }
         }
 
+        const documentText = format === 'asciidoc' ? AsciiDoc.fromMarkdown(converted.markdown) : converted.markdown;
         if (isMulti) {
-          zip.add(currentSegments.join('/') + '/' + fileName, converted.markdown, { compress: true });
+          zip.add(currentPath + fileName, documentText, { compress: true });
         } else {
-          singleMarkdown = converted.markdown;
+          singleDocument = documentText;
           singleFileName = fileName;
         }
 
@@ -382,7 +387,7 @@
           try {
             const file = await Api.fetchAttachmentBytes(entry.attachment);
             if (isMulti) {
-              zip.add(currentSegments.join('/') + '/attachments/' + entry.safeName, file.bytes);
+              zip.add(currentPath + 'attachments/' + entry.safeName, file.bytes);
             } else {
               attachmentZip.add('attachments/' + entry.safeName, file.bytes);
             }
@@ -418,8 +423,10 @@
         return { ok: true, files: [archiveName], pages: pages.length };
       }
 
-      const mdBlob = new Blob([singleMarkdown], { type: 'text/markdown;charset=utf-8' });
-      downloadBlob(mdBlob, singleFileName);
+      const documentBlob = new Blob([singleDocument], {
+        type: format === 'asciidoc' ? 'text/plain;charset=utf-8' : 'text/markdown;charset=utf-8'
+      });
+      downloadBlob(documentBlob, singleFileName);
       const files = [singleFileName];
 
       if (attachmentZip && attachmentZip.size > 0) {
@@ -447,7 +454,7 @@
     }
   }
 
-  chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
+  const messageListener = function (message, sender, sendResponse) {
     if (sender && sender.tab && sender.tab.id != null) tabId = sender.tab.id;
     if (!message || !message.type) return undefined;
 
@@ -470,8 +477,8 @@
       return true;
     }
 
-    if (message.type === 'IMPORT_MD') {
-      importMarkdown(message).then(sendResponse);
+    if (message.type === 'IMPORT_DOCUMENT' || message.type === 'IMPORT_MD') {
+      importDocument(message).then(sendResponse);
       return true;
     }
 
@@ -505,5 +512,11 @@
     }
 
     return undefined;
-  });
+  };
+
+  if (window.__mdExporterMessageListener) {
+    try { chrome.runtime.onMessage.removeListener(window.__mdExporterMessageListener); } catch (error) { /* ignore */ }
+  }
+  window.__mdExporterMessageListener = messageListener;
+  chrome.runtime.onMessage.addListener(messageListener);
 })();

@@ -1,26 +1,42 @@
 {
   "manifest_version": 3,
-  "name": "Confluence MD Exporter",
-  "version": "1.1.4",
-  "description": "Экспорт страниц Confluence в Markdown и импорт Markdown в текущую страницу с преобразованием макросов.",
-  "minimum_chrome_version": "103",
+  "name": "Confluence AI Exporter — Markdown и AsciiDoc",
+  "version": "2.3.1",
+  "description": "Боковая AI-панель для Confluence: анализ требований, редактирование текста, JSON и схем, импорт и экспорт Markdown и AsciiDoc.",
+  "minimum_chrome_version": "114",
   "permissions": [
     "activeTab",
+    "alarms",
+    "contextMenus",
     "scripting",
+    "sidePanel",
     "storage"
   ],
+  "options_ui": {
+    "page": "popup/ai-settings.html",
+    "open_in_tab": true
+  },
+  "optional_host_permissions": ["https://*/*", "http://localhost/*", "http://127.0.0.1/*", "http://[::1]/*"],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "side_panel": {
+    "default_path": "popup/popup.html"
+  },
   "action": {
-      "default_title": "Экспорт и импорт Markdown для Confluence",
-    "default_popup": "popup/popup.html",
+    "default_title": "Открыть панель Confluence AI Exporter",
     "default_icon": {
       "16": "icons/icon16.png",
+      "32": "icons/icon32.png",
       "48": "icons/icon48.png",
       "128": "icons/icon128.png"
     }
   },
   "icons": {
     "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
     "48": "icons/icon48.png",
-    "128": "icons/icon128.png"
+    "128": "icons/icon128.png",
+    "256": "icons/icon256.png"
   }
 }

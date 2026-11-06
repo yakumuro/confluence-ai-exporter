@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>Настройки — Confluence AI Exporter</title>
+  <link rel="icon" type="image/png" sizes="128x128" href="../icons/icon128.png">
+  <link rel="stylesheet" href="ai-settings.css">
+</head>
+<body>
+  <div class="page-shell">
+    <header class="settings-header">
+      <div class="brand" aria-label="Confluence AI Exporter">
+        <img src="../icons/logo.svg" alt="" width="44" height="44">
+        <span><b>Confluence AI Exporter</b><em>Markdown · AsciiDoc · AI</em></span>
+      </div>
+    </header>
+
+    <main>
+      <section class="page-heading">
+        <h1>Настройки</h1>
+        <p>Подключите OpenAI-совместимый API и управляйте своими сценариями обработки текста.</p>
+      </section>
+
+      <section class="settings-card" aria-labelledby="connectionHeading">
+        <div class="section-heading">
+          <span class="section-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none"><path d="m12 3 1.6 4.4L18 9l-4.4 1.6L12 15l-1.6-4.4L6 9l4.4-1.6L12 3Z" /><path d="m18.5 15 .9 2.6 2.6.9-2.6.9-.9 2.6-.9-2.6-2.6-.9 2.6-.9.9-2.6Z" /></svg>
+          </span>
+          <div><h2 id="connectionHeading">Подключение провайдера</h2></div>
+        </div>
+
+        <form id="aiForm">
+          <div class="field">
+            <label for="apiKey">API-ключ</label>
+            <div class="password-field">
+              <input id="apiKey" type="password" autocomplete="off" spellcheck="false" placeholder="Введите ключ провайдера" required>
+              <button id="toggleKey" class="input-action" type="button" aria-label="Показать API-ключ" title="Показать или скрыть ключ">
+                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z" /><circle cx="12" cy="12" r="2.5" /></svg>
+              </button>
+            </div>
+          </div>
+
+          <div class="field">
+            <div class="label-row"><label for="config">Конфигурация API</label><span>JSON</span></div>
+            <textarea id="config" rows="6" spellcheck="false" required aria-describedby="configHelp"></textarea>
+            <p id="configHelp" class="field-help">Укажите <code>baseUrl</code> с префиксом API (например, <code>/v1</code>) и идентификатор <code>model</code>.</p>
+          </div>
+
+          <div class="model-row">
+            <div class="field model-field">
+              <label for="model">Основная модель</label>
+              <select id="model"><option value="">Сначала получите модели или укажите model в JSON</option></select>
+            </div>
+            <button id="loadModels" class="secondary" type="button">
+              <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M20 11a8 8 0 0 0-14.7-4L3 10m0-6v6h6M4 13a8 8 0 0 0 14.7 4L21 14m0 6v-6h-6" /></svg>
+              Получить модели
+            </button>
+          </div>
+          <p class="field-help model-help">Если провайдер не поддерживает /models, укажите точный идентификатор модели в JSON.</p>
+
+          <div class="form-actions">
+            <button id="save" class="primary" type="submit">Сохранить настройки</button>
+            <button id="remove" class="danger" type="button">Удалить ключ и настройки</button>
+          </div>
+        </form>
+        <p id="status" class="status" role="status" aria-live="polite"></p>
+      </section>
+
+      <section id="scenarioSettings" class="settings-card" aria-labelledby="scenarioHeading">
+        <div class="section-heading">
+          <span class="section-icon scenario-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none"><path d="M5 4h14v16H5zM8 8h8M8 12h8M8 16h5" /></svg>
+          </span>
+          <div><h2 id="scenarioHeading">Мои AI-сценарии</h2><p>Сохранённые инструкции для команды «Свободная инструкция»</p></div>
+        </div>
+        <div id="scenarioList"></div>
+      </section>
+    </main>
+    <footer>Confluence AI Exporter · ваши настройки остаются на этом устройстве</footer>
+  </div>
+
+  <dialog id="scenarioEditor" aria-labelledby="scenarioEditorHeading">
+    <div class="dialog-heading"><span class="eyebrow">СЦЕНАРИЙ</span><h3 id="scenarioEditorHeading">Редактирование</h3></div>
+    <div class="field"><label for="scenarioName">Название сценария</label><input id="scenarioName" type="text" maxlength="64" placeholder="Например: Сократить текст"></div>
+    <div class="field"><label for="scenarioPrompt">Инструкция для AI</label><textarea id="scenarioPrompt" rows="8" maxlength="4000" placeholder="Опишите желаемый результат"></textarea></div>
+    <p id="scenarioEditorStatus" class="status" role="status" aria-live="polite"></p>
+    <div class="scenario-editor-actions"><button id="cancelScenarioEdit" class="secondary" type="button">Отмена</button><button id="saveScenarioChanges" class="primary" type="button">Сохранить</button></div>
+  </dialog>
+  <script src="../lib/ai-client.js"></script>
+  <script src="../lib/ai-scenarios.js"></script>
+  <script src="ai-settings.js"></script>
+</body>
+</html>

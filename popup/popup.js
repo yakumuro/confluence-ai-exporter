@@ -7,11 +7,108 @@
   const CONTENT_FILES = [
     'lib/zip.js',
     'lib/converter.js',
+    'lib/asciidoc.js',
     'lib/markdown-importer.js',
     'lib/confluence-api.js',
-    'content/content.js'
+    'content/content.js',
+    'lib/ai-shortcuts.js',
+    'content/ai-shortcuts.js'
   ];
   const SETTINGS_KEY = 'mdExporterSettings';
+  const ONBOARDING_KEY = 'mdExporterOnboardingSeen';
+  const STORIES = [
+    { visual: 'connection', title: 'Работает с вашим Confluence', text: 'Просто откройте нужную страницу — домен определять и настраивать не нужно. Подключите своего AI-провайдера через кнопку с шестерёнкой.' },
+    { visual: 'documents', title: 'Markdown и AsciiDoc', text: 'Экспортируйте одну страницу или целое дерево вместе с вложениями. Импорт Markdown и AsciiDoc поможет перенести материалы обратно.' },
+    { visual: 'editing', title: 'Точечные AI-правки', text: 'Выделите текст и исправьте ошибки, измените оформление, JSON или схему. При коррекции текста исходное форматирование сохраняется.' },
+    { visual: 'context', title: 'AI функции по выделенному тексту', text: 'Выделите нужный фрагмент и откройте контекстное меню. Выберите действие Confluence AI Exporter, чтобы исправить или преобразовать только этот текст.' },
+    { visual: 'review', title: 'Проверка готовности', text: 'AI оценит полноту и непротиворечивость требований, покажет процент готовности и конкретные рекомендации для улучшения.' }
+  ];
+  const STORY_VISUALS = {
+    documents: '<div class="docs-scene"><span class="file-chip chip-md"><b>.md</b><small>Markdown</small></span><div class="doc-sheet"><span class="doc-fold"></span><b>Confluence</b><i></i><i></i><i></i><em>страница + вложения</em></div><span class="file-chip chip-adoc"><b>.adoc</b><small>AsciiDoc</small></span><span class="exchange-arrow arrow-forward">→</span><span class="exchange-arrow arrow-back">←</span></div>',
+    editing: '<div class="editing-scene"><div class="editor-sheet"><div class="editor-top"><i></i><i></i><i></i><span>AI-редактор</span></div><p>Текст <del>с ошипкой</del></p><p>Текст <mark>с ошибкой</mark></p><i class="editor-line"></i><i class="editor-line short"></i><span class="editor-cursor"></span></div><span class="ai-orb">AI</span><span class="spark spark-one"></span><span class="spark spark-two"></span></div>',
+    context: '<div class="context-scene"><div class="context-page"><i></i><i></i><p>Выделите <span>нужный фрагмент</span> текста</p><i></i><i></i></div><div class="context-menu"><b>Confluence AI Exporter</b><span class="menu-active">Исправить текст</span><span>Изменить оформление</span><span>Проверить требования</span></div><span class="mouse-pointer"></span></div>',
+    review: '<div class="review-scene"><div class="score-ring"><span>92<small>%</small></span></div><div class="review-report"><b>Готово к разработке</b><span><i>✓</i>Сценарии описаны</span><span><i>✓</i>Критерии измеримы</span><span><i>✓</i>Зависимости учтены</span></div></div>',
+    connection: '<div class="connection-scene"><span class="connect-node node-one"></span><span class="connect-node node-two"></span><span class="connect-node node-three"></span><div class="confluence-hub"><img src="../icons/logo.svg" alt=""><b>Confluence</b><span>подключено</span></div><div class="secure-pill"><i>✓</i>Локально и под контролем</div></div>'
+  };
+  let storyIndex = 0;
+  let onboardingReturnFocus = null;
+  function onboardingOpen() {
+    return !document.getElementById('onboarding').hidden;
+  }
+  function renderStory() {
+    const story = STORIES[storyIndex];
+    const visual = document.getElementById('storyVisual');
+    visual.className = 'story-visual story-visual-' + story.visual;
+    visual.innerHTML = STORY_VISUALS[story.visual];
+    document.getElementById('storyTitle').textContent = story.title;
+    document.getElementById('storyText').textContent = story.text;
+    const card = document.getElementById('storyCard');
+    card.classList.remove('story-enter');
+    void card.offsetWidth;
+    card.classList.add('story-enter');
+    document.getElementById('storyPrev').disabled = storyIndex === 0;
+    document.getElementById('storyNext').textContent = storyIndex === STORIES.length - 1 ? 'Начать работу' : 'Далее';
+    document.querySelectorAll('#storyProgress button').forEach(function (button, index) {
+      button.classList.toggle('is-active', index === storyIndex);
+      if (index === storyIndex) button.setAttribute('aria-current', 'step');
+      else button.removeAttribute('aria-current');
+    });
+  }
+  function openOnboarding() {
+    if (onboardingOpen()) return;
+    onboardingReturnFocus = document.activeElement;
+    storyIndex = 0;
+    document.getElementById('onboarding').hidden = false;
+    renderStory();
+    document.getElementById('storyNext').focus();
+  }
+  function closeOnboarding() {
+    if (!onboardingOpen()) return;
+    document.getElementById('onboarding').hidden = true;
+    const saved = {}; saved[ONBOARDING_KEY] = true;
+    chrome.storage.local.set(saved);
+    if (onboardingReturnFocus && onboardingReturnFocus.isConnected) onboardingReturnFocus.focus();
+    onboardingReturnFocus = null;
+  }
+  function moveStory(step) {
+    if (step > 0 && storyIndex === STORIES.length - 1) { closeOnboarding(); return; }
+    storyIndex = Math.max(0, Math.min(STORIES.length - 1, storyIndex + step));
+    renderStory();
+  }
+  document.getElementById('aiSettings').addEventListener('click', function () {
+    chrome.runtime.openOptionsPage();
+  });
+  document.getElementById('showOnboarding').addEventListener('click', openOnboarding);
+  document.getElementById('storySkip').addEventListener('click', closeOnboarding);
+  document.getElementById('storyPrev').addEventListener('click', function () { moveStory(-1); });
+  document.getElementById('storyNext').addEventListener('click', function () { moveStory(1); });
+  STORIES.forEach(function (_, index) {
+    const button = document.createElement('button');
+    button.type = 'button'; button.setAttribute('aria-label', 'Сторис ' + (index + 1));
+    button.addEventListener('click', function () { storyIndex = index; renderStory(); });
+    document.getElementById('storyProgress').appendChild(button);
+  });
+  document.getElementById('closePopup').addEventListener('click', function () {
+    window.close();
+  });
+  document.addEventListener('keydown', function (event) {
+    if (onboardingOpen()) {
+      if (event.key === 'Escape') { event.preventDefault(); closeOnboarding(); }
+      else if (event.key === 'ArrowLeft') { event.preventDefault(); moveStory(-1); }
+      else if (event.key === 'ArrowRight') { event.preventDefault(); moveStory(1); }
+      else if (event.key === 'Tab') {
+        const nodes = Array.from(document.querySelectorAll('#onboarding button:not(:disabled)'));
+        const first = nodes[0], last = nodes[nodes.length - 1];
+        if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+        else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+      }
+      return;
+    }
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      window.close();
+    }
+  });
 
   const el = {};
   let tabId = null;
@@ -27,17 +124,34 @@
 
   function cacheElements() {
     [
-      'refresh', 'exportTab', 'importTab', 'exportPanel', 'importPanel',
+      'refresh', 'aiTab', 'exportTab', 'importTab', 'aiPanel', 'exportPanel', 'importPanel',
       'alert', 'settings', 'treeBlock', 'tree',
       'treeInfo', 'selectAll', 'selectNone', 'settingsAttachments', 'attachments',
-      'outputHint', 'download', 'cancel', 'progressBlock', 'progressFill',
+      'outputHint', 'download', 'downloadLabel', 'cancel', 'progressBlock', 'progressFill',
       'progressText', 'errorsToggle', 'errors', 'importCard', 'markdownFile',
       'importButton', 'importStatus',
       'importCodeMacro', 'importCodeTitle', 'importCodeLanguage', 'importExpandMacro',
-      'importExpandTitle', 'importPlantUmlMacro'
+      'importExpandTitle', 'importPlantUmlMacro', 'contextIndicator', 'contextLabel', 'contextTitle',
+      'contextSubtitle', 'fileDropZone', 'fileDropTitle', 'fileDropHint'
     ].forEach(function (id) {
       el[id] = document.getElementById(id);
     });
+  }
+
+  function setContextState(state, title, subtitle) {
+    el.contextIndicator.className = 'head-subtitle context-indicator' + (state ? ' is-' + state : '');
+    el.contextLabel.textContent = state === 'error' ? 'Ошибка' : state === 'loading' ? 'Проверка' : 'Готово';
+    el.contextTitle.textContent = title;
+    el.contextSubtitle.textContent = subtitle;
+  }
+
+  function updateFilePicker() {
+    const file = el.markdownFile.files && el.markdownFile.files[0];
+    el.fileDropZone.classList.toggle('has-file', !!file);
+    el.fileDropTitle.textContent = file ? file.name : 'Выберите Markdown или AsciiDoc';
+    el.fileDropHint.textContent = file
+      ? (file.size / 1024).toFixed(file.size >= 10240 ? 0 : 1) + ' КБ · готов к импорту'
+      : '.md, .markdown, .adoc, .asciidoc · до 2 МБ';
   }
 
   function showAlert(text) {
@@ -53,6 +167,11 @@
   function currentMode() {
     const checked = document.querySelector('input[name="mode"]:checked');
     return checked ? checked.value : 'page';
+  }
+
+  function currentExportFormat() {
+    const checked = document.querySelector('input[name="exportFormat"]:checked');
+    return checked && checked.value === 'asciidoc' ? 'asciidoc' : 'markdown';
   }
 
   function currentImportMode() {
@@ -78,14 +197,38 @@
   }
 
   function selectView(name) {
-    const isExport = name === 'export';
-    el.exportTab.setAttribute('aria-selected', String(isExport));
-    el.exportTab.tabIndex = isExport ? 0 : -1;
-    el.importTab.setAttribute('aria-selected', String(!isExport));
-    el.importTab.tabIndex = isExport ? -1 : 0;
-    el.exportPanel.classList.toggle('hidden', !isExport);
-    el.importPanel.classList.toggle('hidden', isExport);
-    el.importPanel.hidden = isExport;
+    const views = [
+      { name: 'ai', tab: el.aiTab, panel: el.aiPanel },
+      { name: 'export', tab: el.exportTab, panel: el.exportPanel },
+      { name: 'import', tab: el.importTab, panel: el.importPanel }
+    ];
+    for (const view of views) {
+      const selected = view.name === name;
+      view.tab.setAttribute('aria-selected', String(selected));
+      view.tab.tabIndex = selected ? 0 : -1;
+      view.panel.classList.toggle('hidden', !selected);
+      view.panel.hidden = !selected;
+    }
+  }
+
+  async function runAIAction(action, button) {
+    showAlert(null);
+    if (tabId == null) {
+      showAlert('Сначала откройте страницу Confluence.');
+      return;
+    }
+    const buttons = Array.from(document.querySelectorAll('[data-ai-action]'));
+    buttons.forEach(function (item) { item.disabled = true; });
+    if (button) button.classList.add('is-busy');
+    try {
+      const response = await chrome.runtime.sendMessage({ type: 'md-ai-open-panel', tabId: tabId, action: action });
+      if (!response || !response.ok) showAlert((response && response.error) || 'Не удалось открыть AI-редактор.');
+    } catch (error) {
+      showAlert(error.message || 'Не удалось открыть AI-редактор.');
+    } finally {
+      buttons.forEach(function (item) { item.disabled = false; });
+      if (button) button.classList.remove('is-busy');
+    }
   }
 
   function setImportStatus(text, type) {
@@ -124,21 +267,59 @@
     });
   }
 
-  async function ensureContentScript() {
-    const ping = await sendToTab({ type: 'PING' });
-    if (ping && ping.ok) return ping;
+  async function requestCurrentTabAccess() {
+    if (!chrome.permissions || typeof chrome.tabs.get !== 'function') return false;
     try {
-      await chrome.scripting.executeScript({
-        target: { tabId: tabId },
-        files: CONTENT_FILES
-      });
+      const tab = await chrome.tabs.get(tabId);
+      const url = new URL(tab && tab.url ? tab.url : '');
+      if (!/^https?:$/.test(url.protocol)) return false;
+      const origin = url.origin + '/*';
+      if (await chrome.permissions.contains({ origins: [origin] })) return true;
+      return await chrome.permissions.request({ origins: [origin] });
     } catch (error) {
-      return {
-        ok: false,
-        error: 'Нет доступа к странице. Откройте страницу Confluence в текущей вкладке и нажмите на иконку расширения снова.'
-      };
+      return false;
     }
-    return await sendToTab({ type: 'PING' });
+  }
+
+  async function waitForContentScript() {
+    let response = null;
+    for (let attempt = 0; attempt < 4; attempt++) {
+      response = await sendToTab({ type: 'PING' });
+      if (response && response.ok) return response;
+      if (attempt < 3) await new Promise(function (resolve) { setTimeout(resolve, 120); });
+    }
+    return response;
+  }
+
+  async function ensureContentScript(options) {
+    let response = await sendToTab({ type: 'PING' });
+    if (response && response.ok) return response;
+    if (options && options.requestAccess === true) await requestCurrentTabAccess();
+
+    let lastError = response && response.error ? response.error : '';
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        await chrome.scripting.executeScript({
+          target: { tabId: tabId },
+          func: function () { window.__mdExporterInjected = false; }
+        });
+        await chrome.scripting.executeScript({
+          target: { tabId: tabId },
+          files: CONTENT_FILES
+        });
+      } catch (error) {
+        lastError = error && error.message ? error.message : String(error);
+        if (options && options.requestAccess === true && await requestCurrentTabAccess()) continue;
+        break;
+      }
+      response = await waitForContentScript();
+      if (response && response.ok) return response;
+      lastError = response && response.error ? response.error : lastError;
+    }
+    return {
+      ok: false,
+      error: lastError || 'Не удалось подключиться к текущей странице Confluence.'
+    };
   }
 
   function loadSettings() {
@@ -146,6 +327,7 @@
       chrome.storage.local.get(SETTINGS_KEY, function (data) {
         const stored = data && data[SETTINGS_KEY] ? data[SETTINGS_KEY] : {};
         document.querySelector('input[name="mode"][value="' + (stored.mode === 'tree' ? 'tree' : 'page') + '"]').checked = true;
+        document.querySelector('input[name="exportFormat"][value="' + (stored.exportFormat === 'asciidoc' ? 'asciidoc' : 'markdown') + '"]').checked = true;
         el.attachments.checked = stored.includeAttachments !== false;
         const savedMacroOptions = stored.importMacroOptions || {};
         const macroOptionElements = {
@@ -171,6 +353,7 @@
     const payload = {};
     payload[SETTINGS_KEY] = {
       mode: currentMode(),
+      exportFormat: currentExportFormat(),
       includeAttachments: el.attachments.checked,
       importMacroOptions: getImportMacroOptions()
     };
@@ -217,18 +400,21 @@
 
   function updateOutputHint() {
     const mode = currentMode();
+    const format = currentExportFormat();
+    const extension = format === 'asciidoc' ? '.adoc' : '.md';
+    el.downloadLabel.textContent = format === 'asciidoc' ? 'Скачать AsciiDoc' : 'Скачать Markdown';
     const selectedChildren = mode === 'tree' ? countSelected(treeNodes) : 0;
     const pages = 1 + selectedChildren;
     const withAttachments = el.attachments.checked;
     let text = '';
     if (pages === 1) {
-      text = 'Будет скачан один файл <b>' + escapeHtml(safeName(pageInfo ? pageInfo.title : 'Страница')) + '.md</b>';
+      text = 'Будет скачан один файл <b>' + escapeHtml(safeName(pageInfo ? pageInfo.title : 'Страница')) + extension + '</b>';
       if (withAttachments) text += ' и архив <b>-attachments.zip</b> с папкой attachments, если вложения есть';
       text += '.';
       text += ' Если Chrome спросит про скачивание нескольких файлов, разрешите его.';
     } else {
       text = 'Будет скачан архив <b>' + escapeHtml(safeName(pageInfo ? pageInfo.title : 'Страница')) + '.zip</b>'
-        + ' со структурой папок как в Confluence (' + pages + ' стр.).';
+        + ' с файлами ' + extension + ' и структурой папок как в Confluence (' + pages + ' стр.).';
       if (!withAttachments) text += ' Вложения не выгружаются: ссылки на них ведут в Confluence.';
     }
     el.outputHint.innerHTML = text;
@@ -329,10 +515,11 @@
       el.importCard.classList.add('hidden');
       el.outputHint.classList.add('hidden');
       el.download.disabled = true;
-      showAlert((response && response.error) || 'Не удалось прочитать страницу Confluence');
+      setContextState('error', 'Страница недоступна', (response && response.error) || 'Не удалось прочитать страницу Confluence');
       return;
     }
     pageInfo = response.page;
+    setContextState('', 'Страница готова к работе', pageInfo.title || 'Confluence');
     el.settings.classList.remove('hidden');
     el.settingsAttachments.classList.remove('hidden');
     el.importCard.classList.remove('hidden');
@@ -416,6 +603,7 @@
     showAlert(null);
     saveSettings();
     const options = {
+      format: currentExportFormat(),
       includeAttachments: el.attachments.checked,
       tree: currentMode() === 'tree' ? serializeTree(treeNodes) : [],
       treeErrors: currentMode() === 'tree' ? treeErrors : []
@@ -450,11 +638,15 @@
     el.progressText.textContent = 'Отмена…';
   }
 
-  async function onImportMarkdown() {
+  async function onImportDocument() {
     if (importing || !pageInfo) return;
     const file = el.markdownFile.files && el.markdownFile.files[0];
     if (!file) {
-      setImportStatus('Выберите Markdown-файл.', 'error');
+      setImportStatus('Выберите Markdown- или AsciiDoc-файл.', 'error');
+      return;
+    }
+    if (!/\.(?:md|markdown|mdown|mkd|adoc|asciidoc|asc)$/i.test(file.name)) {
+      setImportStatus('Неподдерживаемый файл. Выберите .md, .markdown, .adoc или .asciidoc.', 'error');
       return;
     }
     if (file.size > 2 * 1024 * 1024) {
@@ -462,22 +654,24 @@
       return;
     }
 
+    const format = /\.(?:adoc|asciidoc|asc)$/i.test(file.name) ? 'asciidoc' : 'markdown';
     importing = true;
     updateImportControls();
     setImportStatus('Чтение файла и сохранение страницы…');
     try {
-      const markdown = await file.text();
+      const source = await file.text();
       const response = await sendToTab({
-        type: 'IMPORT_MD',
-        markdown: markdown,
+        type: 'IMPORT_DOCUMENT',
+        source: source,
+        format: format,
         mode: currentImportMode(),
         macroOptions: getImportMacroOptions()
       });
       if (!response || !response.ok) {
-        setImportStatus((response && response.error) || 'Не удалось импортировать Markdown.', 'error');
+        setImportStatus((response && response.error) || 'Не удалось импортировать документ.', 'error');
         return;
       }
-      setImportStatus(response.message || 'Markdown импортирован в Confluence.', 'success');
+      setImportStatus(response.message || 'Документ импортирован в Confluence.', 'success');
     } catch (error) {
       setImportStatus(error && error.message ? error.message : String(error), 'error');
     } finally {
@@ -487,7 +681,7 @@
   }
 
   function bindEvents() {
-    const tabs = [el.exportTab, el.importTab];
+    const tabs = [el.aiTab, el.exportTab, el.importTab];
     for (const tab of tabs) {
       tab.addEventListener('click', function () {
         selectView(tab.dataset.panel);
@@ -506,6 +700,12 @@
       });
     }
 
+    for (const button of document.querySelectorAll('[data-ai-action]')) {
+      button.addEventListener('click', function () {
+        runAIAction(button.dataset.aiAction, button);
+      });
+    }
+
     for (const radio of document.querySelectorAll('input[name="mode"]')) {
       radio.addEventListener('change', function () {
         const mode = currentMode();
@@ -513,6 +713,13 @@
         saveSettings();
         updateOutputHint();
         if (mode === 'tree') loadTree();
+      });
+    }
+
+    for (const radio of document.querySelectorAll('input[name="exportFormat"]')) {
+      radio.addEventListener('change', function () {
+        saveSettings();
+        updateOutputHint();
       });
     }
 
@@ -537,14 +744,35 @@
     el.cancel.addEventListener('click', onCancel);
     el.markdownFile.addEventListener('change', function () {
       setImportStatus('');
+      updateFilePicker();
       updateImportControls();
+    });
+    ['dragenter', 'dragover'].forEach(function (type) {
+      el.fileDropZone.addEventListener(type, function (event) {
+        event.preventDefault();
+        el.fileDropZone.classList.add('is-dragging');
+      });
+    });
+    ['dragleave', 'drop'].forEach(function (type) {
+      el.fileDropZone.addEventListener(type, function (event) {
+        event.preventDefault();
+        el.fileDropZone.classList.remove('is-dragging');
+      });
+    });
+    el.fileDropZone.addEventListener('drop', function (event) {
+      const file = event.dataTransfer && event.dataTransfer.files && event.dataTransfer.files[0];
+      if (!file) return;
+      const transfer = new DataTransfer();
+      transfer.items.add(file);
+      el.markdownFile.files = transfer.files;
+      el.markdownFile.dispatchEvent(new Event('change'));
     });
     for (const radio of document.querySelectorAll('input[name="importMode"]')) {
       radio.addEventListener('change', function () {
         updateImportControls();
       });
     }
-    el.importButton.addEventListener('click', onImportMarkdown);
+    el.importButton.addEventListener('click', onImportDocument);
     [
       el.importCodeMacro, el.importCodeTitle, el.importCodeLanguage, el.importExpandMacro,
       el.importExpandTitle, el.importPlantUmlMacro
@@ -555,12 +783,18 @@
       });
     });
     el.refresh.addEventListener('click', async function () {
+      el.refresh.disabled = true;
+      setContextState('loading', 'Обновляем данные', 'Получаем данные из Confluence…');
       treeLoaded = false;
       treeNodes = [];
       treeErrors = [];
-      await ensureContentScript();
-      await refreshPage();
-      await loadJobState();
+      try {
+        await ensureContentScript({ requestAccess: true });
+        await refreshPage();
+        await loadJobState();
+      } finally {
+        el.refresh.disabled = false;
+      }
     });
     el.errorsToggle.addEventListener('click', function () {
       const hidden = el.errors.classList.toggle('hidden');
@@ -582,21 +816,25 @@
   async function init() {
     cacheElements();
     bindEvents();
+    chrome.storage.local.get(ONBOARDING_KEY, function (data) {
+      if (!data || !data[ONBOARDING_KEY]) openOnboarding();
+    });
 
     const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
     const tab = tabs && tabs[0];
     if (!tab || tab.id == null) {
-      showAlert('Не удалось определить активную вкладку');
+      setContextState('error', 'Вкладка не найдена', 'Не удалось определить активную вкладку. Откройте меню на странице Confluence.');
       return;
     }
     tabId = tab.id;
 
     await loadSettings();
+    updateFilePicker();
     el.treeBlock.classList.toggle('hidden', currentMode() !== 'tree');
 
     const ping = await ensureContentScript();
     if (!ping || !ping.ok) {
-      showAlert((ping && ping.error) || 'Нет доступа к странице. Откройте страницу Confluence и повторите попытку.');
+      setContextState('error', 'Нет подключения к Confluence', (ping && ping.error) || 'Нет доступа к странице. Откройте Confluence и повторите попытку.');
       return;
     }
     await refreshPage();

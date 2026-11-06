@@ -178,6 +178,61 @@ test('supports Markdown tables without outer pipes and preserves hard line break
   assert.match(result.storage, /first line<br \/>second line/);
 });
 
+test('восстанавливает нумерованный список внутри ячейки таблицы', function () {
+  const result = importer.parseMarkdown([
+    '| Ключ | Правило проверки |',
+    '| --- | --- |',
+    '| EQID | 1. Разрешить цифры.<br>2. Запретить пробел в начале. |'
+  ].join('\n'));
+  assert.match(
+    result.storage,
+    /<td><ol><li>Разрешить цифры\.<\/li><li>Запретить пробел в начале\.<\/li><\/ol><\/td>/
+  );
+  assert.doesNotMatch(result.storage, /&lt;br/);
+});
+
+test('собирает список из ячейки, где пункты идут в одну строку', function () {
+  const result = importer.parseMarkdown([
+    '| Ключ | Правило проверки |',
+    '| --- | --- |',
+    '| MD31 | 1. Первое условие. 2. Второе условие. |'
+  ].join('\n'));
+  assert.match(result.storage, /<td><ol><li>Первое условие\.<\/li><li>Второе условие\.<\/li><\/ol><\/td>/);
+});
+
+test('сочетает в ячейке обычный текст и список', function () {
+  const result = importer.parseMarkdown([
+    '| Ключ | Правило проверки |',
+    '| --- | --- |',
+    '| MD32 | Условия:<br>1. Первое<br>2. Второе |'
+  ].join('\n'));
+  assert.match(result.storage, /<td><p>Условия:<\/p><ol><li>Первое<\/li><li>Второе<\/li><\/ol><\/td>/);
+});
+
+test('сохраняет вложенный список внутри ячейки', function () {
+  const result = importer.parseMarkdown([
+    '| Ключ | Правило проверки |',
+    '| --- | --- |',
+    '| MD33 | 1. Первое<br>  - Вложенное<br>2. Второе |'
+  ].join('\n'));
+  assert.match(
+    result.storage,
+    /<td><ol><li>Первое<ul><li>Вложенное<\/li><\/ul><\/li><li>Второе<\/li><\/ol><\/td>/
+  );
+});
+
+test('переносит разрыв строки br в обычном тексте и в ячейке', function () {
+  const result = importer.parseMarkdown([
+    'Первая строка<br>Вторая строка',
+    '',
+    '| Ключ | Значение |',
+    '| --- | --- |',
+    '| MD34 | одна строка<br>вторая строка |'
+  ].join('\n'));
+  assert.match(result.storage, /Первая строка<br \/>Вторая строка/);
+  assert.match(result.storage, /<td><p>одна строка<br \/>вторая строка<\/p><\/td>/);
+});
+
 test('skips multiline HTML comments without importing their contents', function () {
   const result = importer.parseMarkdown(['Before', '', '<!-- note', 'ignore this text', '-->', '', 'After'].join('\n'));
   assert.match(result.storage, /Before/);
