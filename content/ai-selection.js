@@ -30,6 +30,7 @@
   function rangeText(range) {
     const box = document.createElement('div');
     box.appendChild(range.cloneContents());
+    for (const hidden of box.querySelectorAll('script, style, noscript, template, link, meta')) hidden.remove();
     for (const image of box.querySelectorAll('img')) image.replaceWith(document.createTextNode(image.getAttribute('alt') || image.getAttribute('title') || '[Изображение]'));
     for (const diagram of box.querySelectorAll('canvas')) diagram.replaceWith(document.createTextNode('[Диаграмма]'));
     for (const frame of box.querySelectorAll('iframe, object, embed')) frame.replaceWith(document.createTextNode('[Встроенный блок]'));
@@ -39,9 +40,6 @@
     for (const br of box.querySelectorAll('br')) br.replaceWith('\n');
     for (const block of box.querySelectorAll('p, div, li, pre, details, summary, section, article, tr, table, ul, ol')) block.appendChild(document.createTextNode('\n'));
     return box.textContent.replace(/\n+$/, '');
-  }
-  function mainScope() {
-    return document.querySelector('#main-content, .wiki-content, [data-content-body], main article') || document.body;
   }
   function rangeDocument(range, scope) {
     let wrapper = range.cloneContents();
@@ -106,12 +104,8 @@
       const end = remembered && remembered.input ? remembered.end : active.selectionEnd;
       if (action === 'format') throw new Error('Оформление недоступно в обычном текстовом поле. Выделите текст в визуальном редакторе Confluence.');
       if (action === 'table') throw new Error('Выделите ячейки в редакторе Confluence.');
-      if (start == null || start === end) {
-        if (action !== 'review') throw new Error('Сначала выделите текст.');
-        snapshot = { input: active, start: 0, end: active.value.length, before: active.value, source: active.value };
-      } else {
-        snapshot = { input: active, start, end, before: active.value, source: active.value.slice(start, end) };
-      }
+      if (start == null || start === end) throw new Error('Сначала выделите текст.');
+      snapshot = { input: active, start, end, before: active.value, source: active.value.slice(start, end) };
     } else {
       const selection = window.getSelection();
       if (remembered && remembered.scope && (!remembered.scope.isConnected || fingerprint(remembered.scope) !== remembered.before)) throw new Error('Документ изменился. Выделите фрагмент заново.');
@@ -119,16 +113,7 @@
       const startElement = range && element(range.startContainer);
       const editable = startElement && startElement.closest(EDITABLE);
       const scope = editable || document.body;
-      if (!range || range.collapsed || !scope.contains(range.endContainer)) {
-        if (action !== 'review') throw new Error('Сначала выделите текст на странице.');
-        // Проверка документа целиком: выделение не требуется, берём всё содержимое страницы или редактора.
-        const docScope = editable || mainScope();
-        const docRange = document.createRange();
-        docRange.selectNodeContents(docScope);
-        const text = rangeText(docRange);
-        if (!text.trim()) throw new Error('Не удалось извлечь текст документа. Откройте страницу Confluence и повторите команду.');
-        snapshot = { scope: docScope, wholeDocument: true, before: fingerprint(docScope), readOnly: true, text, source: text };
-      } else {
+      if (!range || !scope.contains(range.endContainer)) throw new Error('Сначала выделите текст на странице.');
       const editor = editable ? editorFor(scope) : null;
       const nonEditable = !editable || !!element(range.startContainer).closest('[contenteditable="false"]') || !!element(range.endContainer).closest('[contenteditable="false"]');
       snapshot = { scope, bookmark: bookmark(scope, range), editor, before: fingerprint(scope), readOnly: nonEditable };
@@ -153,7 +138,6 @@
           snapshot.source = { format: 'rich-text', text: snapshot.text, document: rangeDocument(range, scope) };
           snapshot.action = action;
         }
-      }
       }
     }
     const size = JSON.stringify(snapshot.source).length;

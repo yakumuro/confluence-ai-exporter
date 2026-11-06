@@ -134,7 +134,7 @@
 
     const comparison = add('div', '', body); comparison.className = 'comparison';
     const originalPane = add('section', '', comparison); originalPane.className = 'pane original-pane';
-    const originalHeader = add('div', '', originalPane); originalHeader.className = 'pane-header'; add('span', message.action === 'review' ? 'Документ' : 'Исходный текст', originalHeader);
+    const originalHeader = add('div', '', originalPane); originalHeader.className = 'pane-header'; add('span', 'Исходный текст', originalHeader);
     const originalContent = add('div', '', originalPane); originalContent.className = 'pane-content';
     const loader = add('div', '', comparison); loader.className = 'comparison-loader';
     add('div', '', loader).className = 'loader-spinner'; add('span', 'AI работает…', loader);
@@ -150,7 +150,12 @@
     function renderOriginal() {
       originalContent.replaceChildren();
       const source = message.snapshot && message.snapshot.source;
-      if (!source) { add('p', 'Выделенный текст недоступен.', originalContent); return; }
+      if (!source) {
+        add('p', message.action === 'review'
+          ? 'Текст не выделен. Закройте это окно, выделите нужный фрагмент или весь документ (Ctrl+A, на Mac — ⌘+A) и запустите проверку повторно.'
+          : 'Выделенный текст недоступен.', originalContent);
+        return;
+      }
       if (source.format === 'rich-text') formatted(source.document, originalContent);
       else if (Array.isArray(source.cells)) {
         const table = add('table', '', originalContent); table.className = 'table-preview';

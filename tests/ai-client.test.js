@@ -78,7 +78,7 @@ test('requirements review returns a normalized score and actionable recommendati
     const body = JSON.parse(options.body);
     assert.match(body.messages[0].content, /атомарность/);
     assert.match(body.messages[0].content, /тестируемость/);
-    assert.deepEqual(JSON.parse(body.messages[1].content), { instruction: '', document: 'Система должна сохранять документ.' });
+    assert.deepEqual(JSON.parse(body.messages[1].content), { instruction: '', selection: 'Система должна сохранять документ.' });
     return reply(JSON.stringify(response))();
   });
   assert.deepEqual(result, {
